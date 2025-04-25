@@ -18,18 +18,21 @@ import ExternalHtmlPlugin from "@jspsych/plugin-external-html";
 import InstructionsPlugin from "@jspsych/plugin-instructions";
 import HTMLButtonResponsePlugin from "@jspsych/plugin-html-button-response";
 import HTMLSliderResponsePlugin from "@jspsych/plugin-html-slider-response";
-import MOTPlugin from "./plugins/mot.ts";
+import IBPlugin from "./plugins/ib.ts";
 import { initJsPsych } from "jspsych";
 // Prolific variables
 const PROLIFIC_URL = 'https:app.prolific.com/submissions/complete?cc=C1AE31ZY';
 // Trials
 import examples from '../assets/examples.json';
 
+
 // Define global experiment variables
+const MAXBOUNCES = 20;
 // REVIEW: add more examples?
 const EXAMPLE1 = examples[0];
 const EXAMPLE2 = examples[1];
 EXAMPLE2.probes = [[24, 1]];
+EXAMPLE2.disappear = 1;
 const EXAMPLE3 = examples[2];
 // const N_TRIALS = trial_list.length;
 // const TIME_PER_TRIAL = dataset[0].positions.length / 24;
@@ -49,10 +52,9 @@ const SKIP_INSTRUCTIONS = true;
 function gen_trial(jspsych,
                    trial_id,
                    scene,
+                   subtask = "LOCERROR",
                    reverse = false,
-                   targets = true,
-                   effort_dial = false,
-                   effort_slider = false
+                   measure_count = false,
                   ) {
 
   if (reverse) {
@@ -63,33 +65,33 @@ function gen_trial(jspsych,
   const display_height = MOT_HEIGHT * CHINREST_SCALE;
 
   const tracking = {
-    type: MOTPlugin,
-    task: "PROBES",
+    type: IBPlugin,
+    task: subtask,
     scene: JSON.stringify(scene),
     targets: 4,
-    object_class: "mot-distractor",
-    target_class: "mot-target",
-    probe_class: "mot-probe",
+    distractor_class: "ib-distractor",
+    target_class: "ib-target",
+    probe_class: "ib-probe",
     display_width: display_width,
     display_height: display_height,
     flip_height: false,
     flip_width: false,
     // flip_height: jspsych.randomization.sampleBernoulli(0.5),
     // flip_width: jspsych.randomization.sampleBernoulli(0.5),
-    effort_dial: effort_dial,
     world_scale: 720.0, // legacy datasets are +- 400 units
     premotion_dur: 4000.0,
+    // step_dur: 100.0,
   };
 
   const sub_tl = [tracking];
 
-  if (effort_slider) {
+  if (measure_count) {
     sub_tl.push({
       type: HTMLSliderResponsePlugin,
       stimulus: `<div style="width:${display_width}px;">` +
-        `<p>How effortful was tracking?</p></div>`,
+        `<p>How many times did the targets bounce?</p></div>`,
       require_movement: true,
-      labels: ['None', 'Somewhat', 'A lot']
+      labels: ['0', `${0.5 * MAXBOUNCES}`, `${MAXBOUNCES}`]
     });
   }
 
@@ -97,10 +99,9 @@ function gen_trial(jspsych,
     timeline: sub_tl,
     data: {
       trial_id: trial_id,
+      subtask: subtask,
       reversed: reverse,
-      targets: targets,
-      effort_dial: effort_dial,
-      effort_slider: effort_slider
+      measure_count: measure_count,
     }
   };
   return (tl);
@@ -422,7 +423,9 @@ export async function run({ assetPaths, input = {}, environment, title, version 
   // });
 
 
-  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, false, true, false, false));
+  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, 'NOTASK'));
+  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, 'PROBE'));
+  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, 'LOCERROR'));
 
   await jsPsych.run(timeline);
 
