@@ -115,7 +115,7 @@ class IBPlugin implements JsPsychPlugin<Info> {
         /**
          * SETUP
          */
-
+        display_element.innerHTML = '';
         // VARIABLE DECLARATIONS
         const scene = JSON.parse(trial.scene);
         const state = scene.positions;
@@ -146,7 +146,7 @@ class IBPlugin implements JsPsychPlugin<Info> {
         ib_el.className = "ib-div";
         ib_el.style = `width:${trial.display_width}px;height:${trial.display_height}px`;
         display_element.appendChild(ib_el);
-
+        // if the task==LOCERROR, gets rewritten later
         let animate_locresponse = () => {};
 
         // initialize animation timeline
@@ -203,7 +203,9 @@ class IBPlugin implements JsPsychPlugin<Info> {
             obj_elems[i] = obj_el;
         }
 
-
+        /**
+         * ANIMATIONS
+         */
 
         // motion phase
         for (let i = 0; i < n_objects; i++) {
@@ -251,7 +253,6 @@ class IBPlugin implements JsPsychPlugin<Info> {
                 tl.set(probe_elem, {opacity: 0}, probe_stop)
             };
             for (let probe_frame of probes) {
-                console.log(probe_frame);
                 const [frame, obj_id] = probe_frame;
                 probe_anim(frame, obj_id);
             }
@@ -276,7 +277,11 @@ class IBPlugin implements JsPsychPlugin<Info> {
             };
         }
 
-        // task response logic
+
+        /**
+         * RESPONSE LOGIC
+         */
+
         const after_loc_response = (click:MouseEvent) => {
             if (tl.completed) {
                 const rt = performance.now() - start_time;
@@ -290,7 +295,6 @@ class IBPlugin implements JsPsychPlugin<Info> {
             }
         };
         const after_probe_response = (kbe: KeyboardEvent) => {
-            console.log(kbe);
             if (!tl.completed &&
                 this.jsPsych.pluginAPI.compareKeys(kbe.key, ' ')) {
                 const rt = performance.now() - start_time;
@@ -305,7 +309,6 @@ class IBPlugin implements JsPsychPlugin<Info> {
                 });
             }
         };
-
 
         // task prompt
         task_prompt = document.createElement("div");

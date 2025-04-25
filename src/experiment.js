@@ -54,7 +54,7 @@ function gen_trial(jspsych,
                    scene,
                    subtask = "LOCERROR",
                    reverse = false,
-                   measure_count = false,
+                   measure_count = true,
                   ) {
 
   if (reverse) {
