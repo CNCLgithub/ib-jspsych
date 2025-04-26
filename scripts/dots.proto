@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+message Dot {
+  float x = 1;
+  float y = 2;
+}
+
+message Probe {
+  uint32 frame = 1;
+  uint32 obj = 2;
+}
+
+message Step {
+  repeated Dot dots = 1;
+}
+
+message Trial {
+  repeated Step steps = 1;
+  repeated Probe probes = 2;
+  optional uint32 disappear = 3;
+}
+
+message Dataset {
+  repeated Trial trials = 1;
+}

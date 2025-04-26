@@ -23,17 +23,81 @@ import { initJsPsych } from "jspsych";
 // Prolific variables
 const PROLIFIC_URL = 'https:app.prolific.com/submissions/complete?cc=C1AE31ZY';
 // Trials
-import examples from '../assets/examples.json';
+// import { fs } from "fs";
+import protobuf from "protobufjs";
+// import examples from '../assets/examples.json';
 
+
+const protoSchema = `
+syntax = "proto3";
+
+message Dot {
+  float x = 1;
+  float y = 2;
+}
+
+message Probe {
+  uint32 frame = 1;
+  uint32 obj = 2;
+}
+
+message Step {
+  repeated Dot dots = 1;
+}
+
+message Trial {
+  repeated Step steps = 1;
+  repeated Probe probes = 2;
+  optional uint32 disappear = 3;
+}
+
+message Dataset {
+  repeated Trial trials = 1;
+}
+`;
+
+const RAWDATA = await fetch("../assets/dataset.bin", { method: 'GET' });
+const RAWBUFFER = await RAWDATA.arrayBuffer();
+const DATASET = parseDataset();
+
+// Function to load and parse the Protobuf binary file
+function parseDataset() {
+  try {
+    // Load the Protobuf schema
+    const root = protobuf.parse(protoSchema).root;
+    const Dataset = root.lookupType('Dataset');
+
+    // Fetch the binary file
+    // const response = fetch(filename, { method: 'GET' });
+    console.log(RAWDATA);
+    if (!RAWDATA.ok) {
+      throw new Error(`HTTP error ${RAWDATA.status}: ${RAWDATA.statusText || 'Unknown error'}`);
+    }
+
+    // Read the binary data
+    if (RAWBUFFER.byteLength === 0) {
+      throw new Error('Fetched file is empty');
+    }
+
+    // Decode the binary data
+    const uint8Array = new Uint8Array(RAWBUFFER);
+    const message = Dataset.decode(uint8Array);
+    console.log(`Loaded ${message.trials.length} trials`);
+    return message;
+  } catch (error) {
+    console.error('Error loading dots:', error);
+    throw error;
+  }
+};
 
 // Define global experiment variables
 const MAXBOUNCES = 20;
 // REVIEW: add more examples?
-const EXAMPLE1 = examples[0];
-const EXAMPLE2 = examples[1];
+const EXAMPLE1 = DATASET.trials[0];
+const EXAMPLE2 = DATASET.trials[1];
 EXAMPLE2.probes = [[24, 1]];
 EXAMPLE2.disappear = 1;
-const EXAMPLE3 = examples[2];
+const EXAMPLE3 = DATASET.trials[2];
 // const N_TRIALS = trial_list.length;
 // const TIME_PER_TRIAL = dataset[0].positions.length / 24;
 var EXP_DURATION = 20 //  in minutes
@@ -67,7 +131,7 @@ function gen_trial(jspsych,
   const tracking = {
     type: IBPlugin,
     task: subtask,
-    scene: JSON.stringify(scene),
+    scene: scene,
     targets: 4,
     distractor_class: "ib-distractor",
     target_class: "ib-target",

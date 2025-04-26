@@ -19,11 +19,8 @@ const info = <const>{
         scene: {
             // BOOL, STRING, INT, FLOAT, FUNCTION, KEY, KEYS, SELECT, HTML_STRING,
             // IMAGE, AUDIO, VIDEO, OBJECT, COMPLEX
-            type: ParameterType.STRING,
-            description: "The json-serialized string encoding motion frames." +
-                " The string should decode into an array of arrays, where the first" +
-                " dimension denotes the number of time steps, and the second dimension" +
-                " denotes the state for each object.",
+            type: ParameterType.OBJECT,
+            description: "A protobuf object describing object tractories, probe timings, etc.",
         },
         targets: {
             type: ParameterType.INT,
@@ -117,9 +114,9 @@ class IBPlugin implements JsPsychPlugin<Info> {
          */
         display_element.innerHTML = '';
         // VARIABLE DECLARATIONS
-        const scene = JSON.parse(trial.scene);
-        const state = scene.positions;
-        const n_objects = state[0].length;
+        const scene = trial.scene;
+        const state = scene.steps;
+        const n_objects = state[0].dots.length;
         const obj_elems = Array<HTMLElement>(n_objects);
         let task_prompt: HTMLElement;
         let start_time: number = 0.0;
@@ -192,11 +189,14 @@ class IBPlugin implements JsPsychPlugin<Info> {
                 trial.target_class : trial.distractor_class
             const obj_el = document.createElement("span");
             obj_el.className = css_cls;
-            // initial positoins of objects
-            let [x, y] = t_pos(state[0][i].slice(0, 2));
-            obj_el.setAttribute("style",
-                                `width:${obj_dim}px;height:${obj_dim}px;` +
-                `transform:translateX(${x}px) translateY(${y}px);`);
+            // initial positions of objects
+            const dot = state[0].dots[i];
+            const [x, y] = t_pos([dot.x, dot.y]);
+            obj_el.setAttribute(
+                "style",
+                `width:${obj_dim}px;height:${obj_dim}px;` +
+                    `transform:translateX(${x}px) translateY(${y}px);`
+            );
             obj_el.id = `obj_${i}`;
             // store info
             ib_el.appendChild(obj_el);
@@ -209,7 +209,10 @@ class IBPlugin implements JsPsychPlugin<Info> {
 
         // motion phase
         for (let i = 0; i < n_objects; i++) {
-            const positions = state.map(frame => t_pos(frame[i].slice(0, 2)));
+            const positions = state.map((step) => {
+                const obj = step.dots[i];
+                return (t_pos([obj.x, obj.y]));
+            });
             const xs = positions.map(f => ({
                 to: f[0],
                 duration: trial.step_dur
@@ -233,7 +236,10 @@ class IBPlugin implements JsPsychPlugin<Info> {
             const probe_anim = (frame: number, obj_id: number) => {
                 const positions = state
                     .slice(frame, frame + trial.probe_steps)
-                    .map(ps => t_pos(ps[obj_id].slice(0, 2), probe_dim));
+                    .map(step => {
+                        const obj = step.dots[obj_id];
+                        return (t_pos([obj.x, obj.y], probe_dim));
+                    });
                 const xs = positions.map(f => ({
                     to: f[0],
                     duration: trial.step_dur
