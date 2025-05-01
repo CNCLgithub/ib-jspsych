@@ -17,9 +17,11 @@
   height: 500px;
   width: 500px;
   border-style: solid;
-  // border-width: 10px;
   border-color: #000000;
-  display: flex;
+  margin: 20px auto;
+  overflow: hidden;
+  position: relative;
+  // display: flex;
 }
 
 .ib-target {

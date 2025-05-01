@@ -146,7 +146,8 @@ class IBPlugin implements JsPsychPlugin<Info> {
         // ELEMENTS
         let ib_el = document.createElement("div");
         ib_el.className = "ib-div";
-        ib_el.style = `width:${trial.display_width}px;height:${trial.display_height}px`;
+        ib_el.style = `width:${trial.display_width}px;`+
+            `height:${trial.display_height}px`;
         display_element.appendChild(ib_el);
         // if the task==LOCERROR, gets rewritten later
         let animate_locresponse = () => {};
@@ -198,6 +199,7 @@ class IBPlugin implements JsPsychPlugin<Info> {
             const [x, y] = t_pos([dot.x, dot.y]);
             obj_el.setAttribute(
                 "style",
+                'z-index:3;' +
                 `width:${obj_dim}px;height:${obj_dim}px;` +
                     `transform:translateX(${x}px) translateY(${y}px);`,
             );
@@ -232,16 +234,19 @@ class IBPlugin implements JsPsychPlugin<Info> {
         // gorilla
         if (scene.hasOwnProperty("gorilla")) {
             const gorilla_el = document.createElement("span");
-            gorilla_el.className = trial.gorilla;
+            gorilla_el.className = trial.gorilla_class;
             // initial positions of objects
-            const parent = state[0].dots[trial.gorilla.parent - 1];
+            const timestep = state[scene.gorilla.frame];
+            const parent = timestep.dots[scene.gorilla.parent - 1];
             const [gorilla_x, gorilla_y] = t_pos([parent.x, parent.y]);
             gorilla_el.setAttribute(
                 "style",
+                `z-index: 1;` +
                 `width:${obj_dim}px;height:${obj_dim}px;opacity:0;` +
                     `transform:translateX(${gorilla_x}px) translateY(${gorilla_y}px);`,
             );
             gorilla_el.id = "gorilla";
+            ib_el.appendChild(gorilla_el);
             const gorilla_dur = n_steps - scene.gorilla.frame;
             const gorilla_stop = [
                 gorilla_x + scene.gorilla.speedx * gorilla_dur,
@@ -256,6 +261,11 @@ class IBPlugin implements JsPsychPlugin<Info> {
                 },
                 scene.gorilla.frame * trial.step_dur,
             );
+            // opacity
+            tl.set(gorilla_el, { opacity: 1.0 },
+                   scene.gorilla.frame * trial.step_dur);
+            tl.set(gorilla_el, { opacity: 0.0 },
+                   (scene.gorilla.frame + gorilla_dur) * trial.step_dur);
         }
 
         // subtask animations

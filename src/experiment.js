@@ -153,7 +153,7 @@ function gen_trial(
     // flip_height: jspsych.randomization.sampleBernoulli(0.5),
     // flip_width: jspsych.randomization.sampleBernoulli(0.5),
     world_scale: 720.0, // legacy datasets are +- 400 units
-    premotion_dur: 4000.0,
+    premotion_dur: 2000.0,
     // step_dur: 100.0,
   };
 
@@ -502,9 +502,9 @@ export async function run({
   //     button_label: 'Done'
   // });
 
-  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, "NOTASK"));
-  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, "PROBE"));
-  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, "LOCERROR"));
+  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, false, "NOTASK"));
+  // timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, "PROBE"));
+  // timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, "LOCERROR"));
 
   await jsPsych.run(timeline);
 
