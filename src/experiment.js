@@ -21,12 +21,11 @@ import HTMLSliderResponsePlugin from "@jspsych/plugin-html-slider-response";
 import IBPlugin from "./plugins/ib.ts";
 import { initJsPsych } from "jspsych";
 // Prolific variables
-const PROLIFIC_URL = 'https:app.prolific.com/submissions/complete?cc=C1AE31ZY';
+const PROLIFIC_URL = "https:app.prolific.com/submissions/complete?cc=C1AE31ZY";
 // Trials
 // import { fs } from "fs";
 import protobuf from "protobufjs";
 // import examples from '../assets/examples.json';
-
 
 const protoSchema = `
 syntax = "proto3";
@@ -34,6 +33,13 @@ syntax = "proto3";
 message Dot {
   float x = 1;
   float y = 2;
+}
+
+message Gorilla {
+  float frame = 1;
+  float parent = 2;
+  float speedx = 3;
+  float speedy = 4;
 }
 
 message Probe {
@@ -47,8 +53,9 @@ message Step {
 
 message Trial {
   repeated Step steps = 1;
-  repeated Probe probes = 2;
-  optional uint32 disappear = 3;
+  optional Gorilla gorilla = 2;
+  repeated Probe probes = 3;
+  optional uint32 disappear = 4;
 }
 
 message Dataset {
@@ -56,7 +63,7 @@ message Dataset {
 }
 `;
 
-const RAWDATA = await fetch("../assets/dataset.bin", { method: 'GET' });
+const RAWDATA = await fetch("../assets/dataset.bin", { method: "GET" });
 const RAWBUFFER = await RAWDATA.arrayBuffer();
 const DATASET = parseDataset();
 
@@ -65,18 +72,20 @@ function parseDataset() {
   try {
     // Load the Protobuf schema
     const root = protobuf.parse(protoSchema).root;
-    const Dataset = root.lookupType('Dataset');
+    const Dataset = root.lookupType("Dataset");
 
     // Fetch the binary file
     // const response = fetch(filename, { method: 'GET' });
     console.log(RAWDATA);
     if (!RAWDATA.ok) {
-      throw new Error(`HTTP error ${RAWDATA.status}: ${RAWDATA.statusText || 'Unknown error'}`);
+      throw new Error(
+        `HTTP error ${RAWDATA.status}: ${RAWDATA.statusText || "Unknown error"}`,
+      );
     }
 
     // Read the binary data
     if (RAWBUFFER.byteLength === 0) {
-      throw new Error('Fetched file is empty');
+      throw new Error("Fetched file is empty");
     }
 
     // Decode the binary data
@@ -85,10 +94,10 @@ function parseDataset() {
     console.log(`Loaded ${message.trials.length} trials`);
     return message;
   } catch (error) {
-    console.error('Error loading dots:', error);
+    console.error("Error loading dots:", error);
     throw error;
   }
-};
+}
 
 // Define global experiment variables
 const MAXBOUNCES = 20;
@@ -100,7 +109,7 @@ EXAMPLE2.disappear = 1;
 const EXAMPLE3 = DATASET.trials[2];
 // const N_TRIALS = trial_list.length;
 // const TIME_PER_TRIAL = dataset[0].positions.length / 24;
-var EXP_DURATION = 20 //  in minutes
+var EXP_DURATION = 20; //  in minutes
 const MOT_WIDTH = 720; // pixels
 const MOT_HEIGHT = 480; // pixels
 // const STIM_DEG = 10;
@@ -112,15 +121,15 @@ const SKIP_INSTRUCTIONS = true;
 // const SKIP_PROLIFIC_ID = true;
 // const SKIP_INSTRUCTIONS = true;
 
-
-function gen_trial(jspsych,
-                   trial_id,
-                   scene,
-                   subtask = "LOCERROR",
-                   reverse = false,
-                   measure_count = true,
-                  ) {
-
+function gen_trial(
+  jspsych,
+  trial_id,
+  scene,
+  gorilla_tgt,
+  subtask = "LOCERROR",
+  reverse = false,
+  measure_count = true,
+) {
   if (reverse) {
     scene.positions = scene.positions.toReversed();
   }
@@ -135,6 +144,7 @@ function gen_trial(jspsych,
     targets: 4,
     distractor_class: "ib-distractor",
     target_class: "ib-target",
+    gorilla_class: gorilla_tgt ? "ib-target" : "ib-distractor",
     probe_class: "ib-probe",
     display_width: display_width,
     display_height: display_height,
@@ -152,10 +162,11 @@ function gen_trial(jspsych,
   if (measure_count) {
     sub_tl.push({
       type: HTMLSliderResponsePlugin,
-      stimulus: `<div style="width:${display_width}px;">` +
+      stimulus:
+        `<div style="width:${display_width}px;">` +
         `<p>How many times did the targets bounce?</p></div>`,
       require_movement: true,
-      labels: ['0', `${0.5 * MAXBOUNCES}`, `${MAXBOUNCES}`]
+      labels: ["0", `${0.5 * MAXBOUNCES}`, `${MAXBOUNCES}`],
     });
   }
 
@@ -166,28 +177,33 @@ function gen_trial(jspsych,
       subtask: subtask,
       reversed: reverse,
       measure_count: measure_count,
-    }
+    },
   };
-  return (tl);
-};
+  return tl;
+}
 
 /**
  * This function will be executed by jsPsych Builder and is expected to run the jsPsych experiment
  *
  * @type {import("jspsych-builder").RunFunction}
  */
-export async function run({ assetPaths, input = {}, environment, title, version }) {
-
+export async function run({
+  assetPaths,
+  input = {},
+  environment,
+  title,
+  version,
+}) {
   const jsPsych = initJsPsych({
     show_progress_bar: true,
     on_finish: () => {
-      if (typeof jatos !== 'undefined') {
+      if (typeof jatos !== "undefined") {
         // in jatos environment
         jatos.endStudyAndRedirect(PROLIFIC_URL, jsPsych.data.get().json());
       } else {
         return jsPsych;
-      };
-    }
+      }
+    },
   });
 
   const timeline = [];
@@ -211,15 +227,17 @@ export async function run({ assetPaths, input = {}, environment, title, version 
   if (!SKIP_PROLIFIC_ID) {
     timeline.push({
       type: SurveyTextPlugin,
-      questions: [{
-        prompt: 'Please enter your Prolific ID',
-        required: true
-      }],
+      questions: [
+        {
+          prompt: "Please enter your Prolific ID",
+          required: true,
+        },
+      ],
       data: {
         type: "prolific_id",
-      }
+      },
     });
-  };
+  }
 
   // Preload assets
   timeline.push({
@@ -264,7 +282,6 @@ export async function run({ assetPaths, input = {}, environment, title, version 
   //     CHINREST_SCALE = data.scale_factor;
   //   },
   // });
-
 
   // const instruct_tl = [];
   // instruct_tl.push({
@@ -465,7 +482,6 @@ export async function run({ assetPaths, input = {}, environment, title, version 
   //     timeline.push(gen_trial(jsPsych, tid, positions, reverse));
   // };
 
-
   // // debriefing
   // timeline.push({
   //     type: SurveyTextPlugin,
@@ -486,10 +502,9 @@ export async function run({ assetPaths, input = {}, environment, title, version 
   //     button_label: 'Done'
   // });
 
-
-  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, 'NOTASK'));
-  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, 'PROBE'));
-  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, 'LOCERROR'));
+  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, "NOTASK"));
+  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, "PROBE"));
+  timeline.push(gen_trial(jsPsych, 0, EXAMPLE2, "LOCERROR"));
 
   await jsPsych.run(timeline);
 

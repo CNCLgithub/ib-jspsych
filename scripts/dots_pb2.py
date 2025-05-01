@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndots.proto\"\x1b\n\x03\x44ot\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\"#\n\x05Probe\x12\r\n\x05\x66rame\x18\x01 \x01(\r\x12\x0b\n\x03obj\x18\x02 \x01(\r\"\x1a\n\x04Step\x12\x12\n\x04\x64ots\x18\x01 \x03(\x0b\x32\x04.Dot\"[\n\x05Trial\x12\x14\n\x05steps\x18\x01 \x03(\x0b\x32\x05.Step\x12\x16\n\x06probes\x18\x02 \x03(\x0b\x32\x06.Probe\x12\x16\n\tdisappear\x18\x03 \x01(\rH\x00\x88\x01\x01\x42\x0c\n\n_disappear\"!\n\x07\x44\x61taset\x12\x16\n\x06trials\x18\x01 \x03(\x0b\x32\x06.Trialb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndots.proto\"\x1b\n\x03\x44ot\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\"H\n\x07Gorilla\x12\r\n\x05\x66rame\x18\x01 \x01(\x02\x12\x0e\n\x06parent\x18\x02 \x01(\x02\x12\x0e\n\x06speedx\x18\x03 \x01(\x02\x12\x0e\n\x06speedy\x18\x04 \x01(\x02\"#\n\x05Probe\x12\r\n\x05\x66rame\x18\x01 \x01(\r\x12\x0b\n\x03obj\x18\x02 \x01(\r\"\x1a\n\x04Step\x12\x12\n\x04\x64ots\x18\x01 \x03(\x0b\x32\x04.Dot\"\x87\x01\n\x05Trial\x12\x14\n\x05steps\x18\x01 \x03(\x0b\x32\x05.Step\x12\x1e\n\x07gorilla\x18\x02 \x01(\x0b\x32\x08.GorillaH\x00\x88\x01\x01\x12\x16\n\x06probes\x18\x03 \x03(\x0b\x32\x06.Probe\x12\x16\n\tdisappear\x18\x04 \x01(\rH\x01\x88\x01\x01\x42\n\n\x08_gorillaB\x0c\n\n_disappear\"!\n\x07\x44\x61taset\x12\x16\n\x06trials\x18\x01 \x03(\x0b\x32\x06.Trialb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,12 +33,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_DOT']._serialized_start=14
   _globals['_DOT']._serialized_end=41
-  _globals['_PROBE']._serialized_start=43
-  _globals['_PROBE']._serialized_end=78
-  _globals['_STEP']._serialized_start=80
-  _globals['_STEP']._serialized_end=106
-  _globals['_TRIAL']._serialized_start=108
-  _globals['_TRIAL']._serialized_end=199
-  _globals['_DATASET']._serialized_start=201
-  _globals['_DATASET']._serialized_end=234
+  _globals['_GORILLA']._serialized_start=43
+  _globals['_GORILLA']._serialized_end=115
+  _globals['_PROBE']._serialized_start=117
+  _globals['_PROBE']._serialized_end=152
+  _globals['_STEP']._serialized_start=154
+  _globals['_STEP']._serialized_end=180
+  _globals['_TRIAL']._serialized_start=183
+  _globals['_TRIAL']._serialized_end=318
+  _globals['_DATASET']._serialized_start=320
+  _globals['_DATASET']._serialized_end=353
 # @@protoc_insertion_point(module_scope)

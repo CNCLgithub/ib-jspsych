@@ -5,6 +5,13 @@ message Dot {
   float y = 2;
 }
 
+message Gorilla {
+  float frame = 1;
+  float parent = 2;
+  float speedx = 3;
+  float speedy = 4;
+}
+
 message Probe {
   uint32 frame = 1;
   uint32 obj = 2;
@@ -16,8 +23,9 @@ message Step {
 
 message Trial {
   repeated Step steps = 1;
-  repeated Probe probes = 2;
-  optional uint32 disappear = 3;
+  optional Gorilla gorilla = 2;
+  repeated Probe probes = 3;
+  optional uint32 disappear = 4;
 }
 
 message Dataset {
