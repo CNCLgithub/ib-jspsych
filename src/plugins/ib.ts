@@ -11,18 +11,19 @@ export type ValidTask = "NOTASK" | "PROBE" | "LOCERROR";
 
 const info = <const>{
     name: "IB",
+    version: "0.1.0",
     parameters: {
         scene: {
             // BOOL, STRING, INT, FLOAT, FUNCTION, KEY, KEYS, SELECT, HTML_STRING,
             // IMAGE, AUDIO, VIDEO, OBJECT, COMPLEX
             type: ParameterType.OBJECT,
             description:
-                "A protobuf object describing object tractories, probe timings, etc.",
+            "A protobuf object describing object tractories, probe timings, etc.",
         },
         targets: {
             type: ParameterType.INT,
             description:
-                "The first N objects in `scene` are denoted as targets.",
+            "The first N objects in `scene` are denoted as targets.",
         },
         distractor_class: {
             type: ParameterType.STRING,
@@ -32,10 +33,9 @@ const info = <const>{
             type: ParameterType.STRING,
             description: "The css class describing target appearance.",
         },
-
-        gorilla_class: {
-            type: ParameterType.STRING,
-            description: "The css class describing gorilla appearance.",
+        show_gorilla: {
+            type: ParameterType.BOOL,
+            description: "Whether to show the gorilla.",
         },
         probe_class: {
             type: ParameterType.STRING,
@@ -66,7 +66,7 @@ const info = <const>{
             type: ParameterType.FLOAT,
             default: 41.67,
             description:
-                "Duration of a single step in the motion phase (in ms).",
+            "Duration of a single step in the motion phase (in ms).",
         },
         premotion_dur: {
             type: ParameterType.FLOAT,
@@ -83,10 +83,29 @@ const info = <const>{
             default: "NOTASK",
             description: "NOTASK | PROBE | LOCERROR",
         },
+        count_prompt : {
+            type: ParameterType.STRING,
+            default: "<p>Count the number of times the <b>LIGHT</b> objects bounce off the walls</p>",
+            description: "Prompt to display during motion phase",
+        },
+        show_prompt : {
+            type: ParameterType.BOOL,
+            default: true,
+            description: "Wether to display the task prompt",
+        },
         world_scale: {
             type: ParameterType.FLOAT,
             default: 1.0,
             description: "Scaling factor for object trajectories.",
+        },
+    },
+    data : {
+        location : {
+            type : ParameterType.OBJECT
+        },
+
+        probe_responses : {
+            type : ParameterType.OBJECT
         },
     },
 };
@@ -97,6 +116,11 @@ type LocResponse = {
     rt: number;
     clickX: number;
     clickY: number;
+};
+
+type Pos2D = {
+    x: number;
+    y: number;
 };
 
 /**
@@ -149,7 +173,8 @@ class IBPlugin implements JsPsychPlugin<Info> {
         ib_el.style = `width:${trial.display_width}px;`+
             `height:${trial.display_height}px`;
         display_element.appendChild(ib_el);
-        // if the task==LOCERROR, gets rewritten later
+
+           // if the task==LOCERROR, gets rewritten later
         let animate_locresponse = () => {};
 
         // initialize animation timeline
@@ -200,7 +225,7 @@ class IBPlugin implements JsPsychPlugin<Info> {
             obj_el.setAttribute(
                 "style",
                 'z-index:3;' +
-                `width:${obj_dim}px;height:${obj_dim}px;` +
+                    `width:${obj_dim}px;height:${obj_dim}px;` +
                     `transform:translateX(${x}px) translateY(${y}px);`,
             );
             obj_el.id = `obj_${i}`;
@@ -232,40 +257,41 @@ class IBPlugin implements JsPsychPlugin<Info> {
         }
 
         // gorilla
-        if (scene.hasOwnProperty("gorilla")) {
+        if (trial.show_gorilla && scene.hasOwnProperty("gorilla")) {
             const gorilla_el = document.createElement("span");
-            gorilla_el.className = trial.gorilla_class;
-            // initial positions of objects
+            gorilla_el.className = obj_elems[scene.gorilla.parent - 1].className;
             const timestep = state[scene.gorilla.frame];
             const parent = timestep.dots[scene.gorilla.parent - 1];
             const [gorilla_x, gorilla_y] = t_pos([parent.x, parent.y]);
             gorilla_el.setAttribute(
                 "style",
                 `z-index: 1;` +
-                `width:${obj_dim}px;height:${obj_dim}px;opacity:0;` +
+                    `width:${obj_dim}px;height:${obj_dim}px;opacity:0;` +
                     `transform:translateX(${gorilla_x}px) translateY(${gorilla_y}px);`,
             );
             gorilla_el.id = "gorilla";
             ib_el.appendChild(gorilla_el);
-            const gorilla_dur = n_steps - scene.gorilla.frame;
-            const gorilla_stop = [
-                gorilla_x + scene.gorilla.speedx * gorilla_dur,
-                gorilla_y + scene.gorilla.speedy * gorilla_dur,
-            ];
-            tl.add(
-                gorilla_el,
-                {
-                    x: gorilla_stop[0],
-                    y: gorilla_stop[1],
-                    duration: trial.step_dur * gorilla_dur,
-                },
-                scene.gorilla.frame * trial.step_dur,
-            );
+            const gorilla_dur = Math.min(n_steps - scene.gorilla.frame, 64);
             // opacity
             tl.set(gorilla_el, { opacity: 1.0 },
                    scene.gorilla.frame * trial.step_dur);
             tl.set(gorilla_el, { opacity: 0.0 },
                    (scene.gorilla.frame + gorilla_dur) * trial.step_dur);
+
+            const gorilla_frames = Array<Pos2D>(gorilla_dur + 1);
+            for (let i = 0; i <= gorilla_dur; i++) {
+                const timestep = state[scene.gorilla.frame + i];
+                const parent = timestep.dots[scene.gorilla.parent - 1];
+                const [gorilla_x, gorilla_y] = t_pos([parent.x, parent.y]);
+                // const radius = Math.pow(i - 0.5 * gorilla_dur, 2) * obj_dim;
+                const angle = 2 * i * Math.PI / gorilla_dur;
+                const radius = Math.sin(0.5 * angle) * 2 * obj_dim;
+                gorilla_frames[i] = getOrbitPosition(gorilla_x, gorilla_y, radius, angle)
+            }
+            tl.add(gorilla_el, {
+                keyframes : gorilla_frames,
+                duration: trial.step_dur * gorilla_dur,
+            }, trial.step_dur * scene.gorilla.frame);
         }
 
         // subtask animations
@@ -350,7 +376,7 @@ class IBPlugin implements JsPsychPlugin<Info> {
         const after_probe_response = (kbe: KeyboardEvent) => {
             if (
                 !tl.completed &&
-                this.jsPsych.pluginAPI.compareKeys(kbe.key, " ")
+                    this.jsPsych.pluginAPI.compareKeys(kbe.key, " ")
             ) {
                 const rt = performance.now() - start_time;
                 probe_responses.push(rt);
@@ -368,7 +394,13 @@ class IBPlugin implements JsPsychPlugin<Info> {
         // task prompt
         task_prompt = document.createElement("div");
         task_prompt.setAttribute("class", "jspsych-top");
-        if (trial.task == LOCERROR) {
+        if (trial.task == NOTASK) {
+            // Counting prompt
+            if (trial.show_prompt) {
+                task_prompt.setAttribute("style", "color:black");
+                task_prompt.innerHTML = trial.count_prompt;
+            }
+        } else if (trial.task == LOCERROR) {
             task_prompt.setAttribute("style", "color:white");
             task_prompt.innerHTML = "Click where the missing object was";
             ib_el.addEventListener("click", after_loc_response);
@@ -399,6 +431,17 @@ class IBPlugin implements JsPsychPlugin<Info> {
             this.jsPsych.finishTrial(trial_data);
         };
     }
+}
+
+function getOrbitPosition(parentX: number,
+                          parentY: number,
+                          orbitRadius: number,
+                          angle: number) {
+    // Calculate the child's position using parametric equations of a circle
+    const childX = parentX + orbitRadius * Math.cos(angle);
+    const childY = parentY + orbitRadius * Math.sin(angle);
+
+    return { x: childX, y: childY };
 }
 
 export default IBPlugin;
