@@ -24,13 +24,14 @@ import {
   parseDataset,
   assignCondition,
   confirmCondition,
+  initConditionCounts,
 } from "./conditions.js";
 // Prolific variables
 const PROLIFIC_URL = "https:app.prolific.com/submissions/complete?cc=C1AE31ZY";
 
 // Define global experiment variables
 const nscenes = 6;
-const scenes = [...Array(nscenes).keys()].map((x) => x + 1);
+const scenes = [...Array(nscenes).keys()];
 const parents = ["tgt", "dis"];
 const colors = ["light", "dark"];
 const CONDITIONS = scenes.flatMap((scene) =>
@@ -42,6 +43,7 @@ const CONDITIONS = scenes.flatMap((scene) =>
     })),
   ),
 );
+const NCOND = CONDITIONS.length;
 const NTRIALS = 5;
 const MAXBOUNCES = 15;
 const COUNT_LABELS = [...Array(MAXBOUNCES + 1).keys()].map((x) => `${x}`);
@@ -156,7 +158,7 @@ function gen_trial(
 function trialsFromCondition(jsPsych, dataset, condition) {
   let trials = [];
   for (let i = 1; i < NTRIALS; i++) {
-    const tidx = (condition.scene + i - 1) % NTRIALS;
+    const tidx = (condition.scene + i) % nscenes;
     trials.push(gen_trial(jsPsych, i, dataset.trials[tidx]));
   }
   trials = jsPsych.randomization.repeat(trials, 1);
@@ -164,7 +166,7 @@ function trialsFromCondition(jsPsych, dataset, condition) {
     gen_trial(
       jsPsych,
       NTRIALS,
-      dataset.trials[condition.scene - 1],
+      dataset.trials[condition.scene],
       true,
       true,
       condition.parent,
@@ -189,12 +191,16 @@ export async function run({
   let prolific_id = "";
   let cond_idx = -1;
 
+  if (typeof jatos !== "undefined") {
+    await initConditionCounts(CONDITIONS.length);
+  }
+
   const jsPsych = initJsPsych({
     show_progress_bar: true,
     on_finish: () => {
-      confirmCondition(prolific_id, cond_idx + 1);
       if (typeof jatos !== "undefined") {
         // in jatos environment
+        confirmCondition(prolific_id, cond_idx);
         jatos.endStudyAndRedirect(PROLIFIC_URL, jsPsych.data.get().json());
       } else {
         return jsPsych;
@@ -204,12 +210,11 @@ export async function run({
 
   prolific_id =
     jsPsych.data.getURLVariable("prolific_pid") ||
-    jsPsych.randomization.randomID();
-  cond_idx = await assignCondition(prolific_id);
+    `UNKNOWN_${jsPsych.randomization.randomID()}`;
+
+  cond_idx = await assignCondition(prolific_id, CONDITIONS.length);
   const condition = CONDITIONS[cond_idx];
-
   const timeline = [];
-
   const DATASETRAW = await fetch("assets/dataset.bin", { method: "GET" });
   const DATASETBUFFER = await DATASETRAW.arrayBuffer();
   const DATASET = parseDataset(DATASETRAW, DATASETBUFFER);
