@@ -20,100 +20,31 @@ import HTMLButtonResponsePlugin from "@jspsych/plugin-html-button-response";
 import HTMLSliderResponsePlugin from "@jspsych/plugin-html-slider-response";
 import IBPlugin from "./plugins/ib.ts";
 import { initJsPsych } from "jspsych";
+import {
+  parseDataset,
+  assignCondition,
+  confirmCondition,
+} from "./conditions.js";
 // Prolific variables
 const PROLIFIC_URL = "https:app.prolific.com/submissions/complete?cc=C1AE31ZY";
-// Trials
-// import { fs } from "fs";
-import protobuf from "protobufjs";
-// import examples from '../assets/examples.json';
-
-const protoSchema = `
-syntax = "proto3";
-
-message Dot {
-  float x = 1;
-  float y = 2;
-}
-
-message Gorilla {
-  float frame = 1;
-  float parent = 2;
-  float speedx = 3;
-  float speedy = 4;
-}
-
-message Probe {
-  uint32 frame = 1;
-  uint32 obj = 2;
-}
-
-message Step {
-  repeated Dot dots = 1;
-}
-
-message Trial {
-  repeated Step steps = 1;
-  optional Gorilla gorilla = 2;
-  repeated Probe probes = 3;
-  optional uint32 disappear = 4;
-}
-
-message Dataset {
-  repeated Trial trials = 1;
-}
-`;
-
-// Function to load and parse the Protobuf binary file
-function parseDataset(data, buffer) {
-  try {
-    // Load the Protobuf schema
-    const root = protobuf.parse(protoSchema).root;
-    const Dataset = root.lookupType("Dataset");
-
-    // Fetch the binary file
-    // const response = fetch(filename, { method: 'GET' });
-    if (!data.ok) {
-      throw new Error(
-        `HTTP error ${data.status}: ${data.statusText || "Unknown error"}`,
-      );
-    }
-
-    // Read the binary data
-    if (buffer.byteLength === 0) {
-      throw new Error("Fetched file is empty");
-    }
-
-    // Decode the binary data
-    const uint8Array = new Uint8Array(buffer);
-    const message = Dataset.decode(uint8Array);
-    return message;
-  } catch (error) {
-    console.error("Error loading dots:", error);
-    throw error;
-  }
-}
 
 // Define global experiment variables
-
-
 const nscenes = 6;
-const scenes = [...Array(nscenes).keys()].map(x => x + 1);
-const parents = ['tgt', 'dis'];
-const colors = ['light', 'dark'];
-const CONDITIONS = scenes.flatMap(scene =>
-  parents.flatMap(parent =>
-    colors.map( color =>
-      ({
-        scene : scene,
-        parent: parent,
-        color : color
-      })
-    )
-  )
+const scenes = [...Array(nscenes).keys()].map((x) => x + 1);
+const parents = ["tgt", "dis"];
+const colors = ["light", "dark"];
+const CONDITIONS = scenes.flatMap((scene) =>
+  parents.flatMap((parent) =>
+    colors.map((color) => ({
+      scene: scene,
+      parent: parent,
+      color: color,
+    })),
+  ),
 );
-
+const NTRIALS = 5;
 const MAXBOUNCES = 15;
-const COUNT_LABELS = [...Array(MAXBOUNCES+1).keys()].map(x => `${x}`)
+const COUNT_LABELS = [...Array(MAXBOUNCES + 1).keys()].map((x) => `${x}`);
 // const TIME_PER_TRIAL = dataset[0].positions.length / 24;
 var EXP_DURATION = 5; //  in minutes
 const MOT_WIDTH = 720; // pixels
@@ -127,34 +58,35 @@ const SKIP_INSTRUCTIONS = true;
 // const SKIP_INSTRUCTIONS = true;
 
 function gen_trial(
-  jspsych,
+  jsPsych,
   trial_id,
   scene,
-  show_gorilla = false,
-  reverse = false,
   measure_count = true,
+  show_gorilla = false,
+  parent = "tgt",
+  appearance = "ib-target",
 ) {
-  if (reverse) {
-    scene.steps = scene.steps.toReversed();
-  }
-
   const display_width = MOT_WIDTH * CHINREST_SCALE;
   const display_height = MOT_HEIGHT * CHINREST_SCALE;
-
+  let parent_idx = -1;
+  if (show_gorilla) {
+    parent_idx = parent == "tgt" ? 0 : 4;
+  }
   const tracking = {
     type: IBPlugin,
     scene: scene,
     targets: 4,
     distractor_class: "ib-distractor",
     target_class: "ib-target",
-    show_gorilla: show_gorilla,
+    parent: parent_idx,
+    gorilla_class: appearance == "light" ? "ib-target" : "ib-distractor",
     probe_class: "ib-probe",
     display_width: display_width,
     display_height: display_height,
     flip_height: false,
     flip_width: false,
-    flip_height: jspsych.randomization.sampleBernoulli(0.5),
-    flip_width: jspsych.randomization.sampleBernoulli(0.5),
+    flip_height: jsPsych.randomization.sampleBernoulli(0.5),
+    flip_width: jsPsych.randomization.sampleBernoulli(0.5),
     world_scale: 720.0, // legacy datasets are +- 400 units
     premotion_dur: 2000.0,
     show_prompt: measure_count,
@@ -167,7 +99,7 @@ function gen_trial(
     sub_tl.push({
       type: HTMLSliderResponsePlugin,
       stimulus:
-      `<div style="width:${display_width}px;">` +
+        `<div style="width:${display_width}px;">` +
         `<p>How many times did the targets bounce?</p></div>`,
       require_movement: true,
       labels: COUNT_LABELS,
@@ -177,16 +109,35 @@ function gen_trial(
     });
   }
 
-  if (show_gorilla) {
+  if (parent_idx >= 0) {
     sub_tl.push({
+      type: HTMLButtonResponsePlugin,
+      choices: ["Yes", "No"],
+      stimulus:
+        `<div style="width:${display_width}px;">` +
+        `<p>Did you notice anything unusual or out of the ` +
+        ` ordinary while performing the last trial?</p></div>`,
+    });
+    const gorilla_desc = {
       type: SurveyTextPlugin,
-      questions:
-      [
+      questions: [
         {
-          prompt: `<div style="width:${display_width}px;">` +
-            `<p>Did you notice anything unusual or out of the ordinary while performing the last trial?</p></div>`
+          prompt:
+            `<div style="width:${display_width}px;">` +
+            `<p>Please, describe what you noticed.</p></div>`,
+          required: true,
         },
-      ]
+      ],
+    };
+    sub_tl.push({
+      timeline: [gorilla_desc],
+      conditional_function: function () {
+        // get the data from the previous trial,
+        // and check which key was pressed
+        var data = jsPsych.data.get().last(1).values()[0];
+        // clicked yes
+        return data.response == 0;
+      },
     });
   }
 
@@ -194,48 +145,34 @@ function gen_trial(
     timeline: sub_tl,
     data: {
       trial_id: trial_id,
-      reversed: reverse,
       measure_count: measure_count,
+      appearance: appearance,
+      parent: parent,
     },
   };
   return tl;
 }
 
-
-async function assignCondition(prolific_id) {
-  try {
-    const response = await fetch(`http://localhost:3000/candidate-condition?prolific_pid=${prolific_id}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    const data = await response.json();
-    if (data.condition) {
-      return data.condition - 1;
-    } else {
-      throw new Error('No condition returned');
-    }
-  } catch (error) {
-    console.error('Error fetching condition:', error);
-    const cond_idx = Math.floor(Math.random() * conditions.length);
-    return cond_idx;
+function trialsFromCondition(jsPsych, dataset, condition) {
+  let trials = [];
+  for (let i = 1; i < NTRIALS; i++) {
+    const tidx = (condition.scene + i - 1) % NTRIALS;
+    trials.push(gen_trial(jsPsych, i, dataset.trials[tidx]));
   }
-};
-
-async function confirmCondition(prolific_pid, cond_idx) {
-  // Confirm condition assignment
-  try {
-    const res = await fetch('http://localhost:3000/confirm-condition', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prolific_pid: prolific_pid, condition:cond_idx })
-    });
-    if (!res.ok) {
-      console.error('Condition not confirmed: ', res);
-    }
-  } catch (error) {
-    console.error('Error confirming condition:', error);
-  }
-};
+  trials = jsPsych.randomization.repeat(trials, 1);
+  trials.push(
+    gen_trial(
+      jsPsych,
+      NTRIALS,
+      dataset.trials[condition.scene - 1],
+      true,
+      true,
+      condition.parent,
+      condition.color,
+    ),
+  );
+  return trials;
+}
 
 /**
  * This function will be executed by jsPsych Builder and is expected to run the jsPsych experiment
@@ -249,14 +186,13 @@ export async function run({
   title,
   version,
 }) {
-
-  let prolific_id = '';
+  let prolific_id = "";
   let cond_idx = -1;
 
   const jsPsych = initJsPsych({
     show_progress_bar: true,
     on_finish: () => {
-      confirmCondition(prolific_id, cond_idx+1);
+      confirmCondition(prolific_id, cond_idx + 1);
       if (typeof jatos !== "undefined") {
         // in jatos environment
         jatos.endStudyAndRedirect(PROLIFIC_URL, jsPsych.data.get().json());
@@ -266,14 +202,11 @@ export async function run({
     },
   });
 
-  prolific_id = jsPsych.data.getURLVariable('prolific_pid') ||
+  prolific_id =
+    jsPsych.data.getURLVariable("prolific_pid") ||
     jsPsych.randomization.randomID();
   cond_idx = await assignCondition(prolific_id);
   const condition = CONDITIONS[cond_idx];
-  console.log(CONDITIONS);
-  console.log(cond_idx);
-  console.log(condition);
-
 
   const timeline = [];
 
@@ -295,14 +228,14 @@ export async function run({
   timeline.push({
     type: ExternalHtmlPlugin,
     url: "assets/consent.html",
-    cont_btn: 'start',
-    check_fn: function() {
-      if (document.getElementById('consent_checkbox').checked) {
+    cont_btn: "start",
+    check_fn: function () {
+      if (document.getElementById("consent_checkbox").checked) {
         return true;
       } else {
-        alert('You must tick the checkbox to continue with the study.')
+        alert("You must tick the checkbox to continue with the study.");
       }
-    }
+    },
   });
 
   // Preload assets
@@ -329,7 +262,7 @@ export async function run({
     allow_backward: false,
     data: {
       type: "welcome",
-    }
+    },
   });
 
   // Switch to fullscreen
@@ -375,7 +308,7 @@ export async function run({
     allow_backward: false,
   });
 
-  instruct_tl.push(gen_trial(jsPsych, 0, EXAMPLE1, false, false, false));
+  instruct_tl.push(gen_trial(jsPsych, 0, EXAMPLE1, false));
 
   instruct_tl.push({
     type: InstructionsPlugin,
@@ -391,7 +324,7 @@ export async function run({
     allow_backward: false,
   });
 
-  instruct_tl.push(gen_trial(jsPsych, 0, EXAMPLE1, false, false, true));
+  instruct_tl.push(gen_trial(jsPsych, 0, EXAMPLE1));
 
   instruct_tl.push({
     type: InstructionsPlugin,
@@ -409,106 +342,115 @@ export async function run({
   // comprehension check
   const comp_check = {
     type: SurveyMultiChoicePlugin,
-    preamble: "<h2>Comprehension Check</h2> " +
+    preamble:
+      "<h2>Comprehension Check</h2> " +
       "<p> Before beginning the experiment, you must answer a few simple questions to ensure that the instructions are clear." +
       "<br> If you do not answer all questions correctly, you will be returned to the start of the instructions.</p>",
-    questions: [{
-      prompt: "Which of the following is <b>TRUE</b>",
-      name: 'check1',
-      options: [
-        "A) Before motion, you have to click on all of the light objects",
-        "B) The main task is to count the number of bounces from light objects",
-        "C) Only respond if you are 100% sure about the answer",
-      ],
-      required: true
-    },
-    {
-      prompt: " Which of the following statements is <b>FALSE</b>:",
-      name: 'check2',
-      options: [
-        "A) You will use a slider to report the number of bounces",
-        "B) To move on to the next trial, you must move the slider",
-        "C) You can move objects with your mouse",
-      ],
-      required: true
-    },
-               ],
+    questions: [
+      {
+        prompt: "Which of the following is <b>TRUE</b>",
+        name: "check1",
+        options: [
+          "A) Before motion, you have to click on all of the light objects",
+          "B) The main task is to count the number of bounces from light objects",
+          "C) Only respond if you are 100% sure about the answer",
+        ],
+        required: true,
+      },
+      {
+        prompt: " Which of the following statements is <b>FALSE</b>:",
+        name: "check2",
+        options: [
+          "A) You will use a slider to report the number of bounces",
+          "B) To move on to the next trial, you must move the slider",
+          "C) You can move objects with your mouse",
+        ],
+        required: true,
+      },
+    ],
     randomize_question_order: false,
-    on_finish: function(data) {
+    on_finish: function (data) {
       const q1 = data.response.check1[0];
       const q2 = data.response.check2[0];
       // both comp checks must pass
-      data.correct = (q1 == 'B' && q2 == 'C');
+      data.correct = q1 == "B" && q2 == "C";
     },
     data: {
       type: "comp_quiz",
-    }
+    },
   };
 
   // feedback
   const comp_feedback = {
     type: HTMLButtonResponsePlugin,
     stimulus: () => {
-      var last_correct_resp = jsPsych.data.getLastTrialData().values()[0].correct;
+      var last_correct_resp = jsPsych.data
+        .getLastTrialData()
+        .values()[0].correct;
       var msg;
       if (last_correct_resp) {
-        msg = "<h2><span style='color:green'>You passed the comprehension check!</span>" +
+        msg =
+          "<h2><span style='color:green'>You passed the comprehension check!</span>" +
           "<br>When you're ready, please click <b>Next</b> to begin the study. </h2>";
       } else {
-        msg = "<h2><span style='color:red'>You failed to respond <b>correctly</b> to all" +
+        msg =
+          "<h2><span style='color:red'>You failed to respond <b>correctly</b> to all" +
           " parts of the comprehension check.</span>" +
           "<br>Please click <b>Next</b> to revisit the instructions.</h2>";
       }
-      return msg
+      return msg;
     },
-    choices: ['Next'],
+    choices: ["Next"],
     data: {
       // add any additional data that needs to be recorded here
       type: "comp_feedback",
-    }
+    },
   };
 
   // `comp_loop`: if answers are incorrect, `comp_check` will be repeated until answers are correct responses
   const comp_loop = {
     timeline: [...instruct_tl, comp_check, comp_feedback],
-    loop_function: function(data) {
+    loop_function: function (data) {
       // return false if comprehension passes to break loop
       // HACK: changing `timeline` will break this
       const vals = data.values();
       const quiz = vals[vals.length - 2];
-      return (!(quiz.correct));
-    }
+      return !quiz.correct;
+    },
   };
 
   // add comprehension loop
   if (!SKIP_INSTRUCTIONS) {
     timeline.push(comp_loop);
-  };
+  }
 
-  // add exp trials with random shuffle, unique per session
-  // timeline.push(gen_trial(jsPsych, 1, DATASET.trials[0], false));
-  // timeline.push(gen_trial(jsPsych, 2, DATASET.trials[1], false));
-  // timeline.push(gen_trial(jsPsych, 3, DATASET.trials[2], false));
-  // timeline.push(gen_trial(jsPsych, 4, DATASET.trials[3], true));
+  // add exp trials
+  timeline.push(...trialsFromCondition(jsPsych, DATASET, condition));
 
   // debriefing
   timeline.push({
-      type: SurveyTextPlugin,
-      preamble: `<h2><b>Thank you for helping us with our study! ` +
-          `This study was designed to be difficult and we value your responses. </b></h2><br><br> ` +
-          `Please fill out the (optional) survey below and click <b>Done</b> to complete the experiment. <br> `,
-      questions: [
-          {
-              prompt: 'Did you find yourself using any strategies while performing the task?',
-              name: 'Strategy', rows: 5, placeholder: 'None'
-          },
+    type: SurveyTextPlugin,
+    preamble:
+      `<h2><b>Thank you for helping us with our study! ` +
+      `This study was designed to be difficult and we value your responses. </b></h2><br><br> ` +
+      `Please fill out the (optional) survey below and click <b>Done</b> to complete the experiment. <br> `,
+    questions: [
+      {
+        prompt:
+          "Did you find yourself using any strategies while performing the task?",
+        name: "Strategy",
+        rows: 5,
+        placeholder: "None",
+      },
 
-          {
-              prompt: "Are there any additional comments you'd like to add? ",
-              name: 'General', rows: 5, placeholder: 'None'
-          }
-      ],
-      button_label: 'Done'
+      {
+        prompt: "Are there any additional comments you'd like to add? ",
+        name: "General",
+        rows: 5,
+        placeholder: "None",
+      },
+    ],
+    button_label: "Done",
   });
 
   await jsPsych.run(timeline);
