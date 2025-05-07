@@ -141,7 +141,7 @@ export async function assignCondition(prolific_id, ncond = 24) {
   return candidateCondition;
 }
 
-export function confirmCondition(prolific_pid, cond_idx) {
+export async function confirmCondition(prolific_pid, cond_idx) {
   if (typeof jatos === "undefined") {
     console.log("Not in JATOS, doing nothing.");
     return;
@@ -150,10 +150,8 @@ export function confirmCondition(prolific_pid, cond_idx) {
   if (!jatos.batchSession.defined(`/candidates/${prolific_pid}`)) {
     console.error(`Condition not confirmable for ${prolific_pid}`);
   }
-  const count = jatos.batchSession.find(`/conditions/${cond_idx}`).fail(() => {
-    console.error(`Could not load counts for condition ${cond_idx}`);
-  });
-  jatos.batchSession
+  const count = jatos.batchSession.find(`/conditions/${cond_idx}`);
+  await jatos.batchSession
     .replace(`/conditions/${cond_idx}`, count + 1)
     .then(() => {
       jatos.batchSession.remove(`/candidates/${prolific_pid}`);

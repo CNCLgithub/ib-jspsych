@@ -93,7 +93,7 @@ const info = <const>{
         count_prompt: {
             type: ParameterType.STRING,
             default:
-                "<p>Count the number of times the <b>LIGHT</b> objects bounce off the walls</p>",
+                '<p>Count the number of times the <span style="color:#808080;"><b>LIGHT</b></span> objects bounce off the walls</p>',
             description: "Prompt to display during motion phase",
         },
         show_prompt: {

@@ -55,9 +55,9 @@ const MOT_HEIGHT = 480; // pixels
 // const PIXELS_ER_UNIT = MOT_DIM / STIM_DEG;
 var CHINREST_SCALE = 1.0; // to adjust pixel dimensions
 // Debug Variables
-const SKIP_INSTRUCTIONS = true;
-// const SKIP_PROLIFIC_ID = true;
+const SKIP_INSTRUCTIONS = false;
 // const SKIP_INSTRUCTIONS = true;
+// const SKIP_PROLIFIC_ID = true;
 
 function gen_trial(
   jsPsych,
