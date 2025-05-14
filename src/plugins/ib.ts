@@ -33,6 +33,11 @@ const info = <const>{
             type: ParameterType.STRING,
             description: "The css class describing target appearance.",
         },
+        object_radius: {
+            type: ParameterType.FLOAT,
+            default: 40.0,
+            description: "Object radius in world units",
+        },
         parent: {
             type: ParameterType.INT,
             default: -1,
@@ -160,8 +165,8 @@ class IBPlugin implements JsPsychPlugin<Info> {
         // pixels per world unit
         const world_to_display = trial.display_width / trial.world_scale;
         // assuming objects are 40 units -> how many pixels
-        const obj_dim = 40.0 * world_to_display; // REVIEW
-        const probe_dim = 5.0 * world_to_display; // REVIEW
+        const obj_dim = trial.object_radius * world_to_display; // REVIEW
+        const probe_dim = 0.5 * obj_dim ;
         // REVIEW: unused?
         // const tot_dur = trial.step_dur * state.length;
         // const screen_width = document.getElementsByTagName('body')[0].offsetWidth;

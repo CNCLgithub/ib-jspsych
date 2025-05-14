@@ -1,3 +1,6 @@
 numpy
 polars
 protobuf
+scipy
+altair
+marimo[recommended]

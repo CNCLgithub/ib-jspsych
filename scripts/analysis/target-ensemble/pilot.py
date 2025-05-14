@@ -1,0 +1,90 @@
+import marimo
+
+__generated_with = "0.13.7"
+app = marimo.App(width="medium")
+
+
+@app.cell
+def _():
+    import marimo as mo
+    return
+
+
+@app.cell
+def _():
+    import numpy as np
+    import polars as pl
+    import altair as alt
+    alt.theme.enable("carbong100")
+    return (pl,)
+
+
+@app.cell
+def versioning():
+    exp = "target-ensemble"
+    version = "pilot-v1"
+    return exp, version
+
+
+@app.cell
+def _(exp, pl, version):
+    count_schema = {
+        "uid": pl.UInt16,
+        "scene": pl.UInt8,
+        "count": pl.UInt8,
+        "rt": pl.Float32,
+        "order": pl.UInt8,
+    }
+
+    parent = pl.Enum(['Grouped', 'Alone'])
+    notice_schema = {
+        "uid": pl.UInt16,
+        "scene": pl.UInt8,
+        "grouped" : pl.Boolean,
+        "noticed" : pl.Boolean,
+        "description" : pl.String,
+        "rt": pl.Float32,
+        "order": pl.UInt8,
+    }
+
+    count_df = pl.read_csv(f'data/{exp}-{version}_counts.csv', schema=count_schema)
+    noticed_df = (
+        pl.read_csv(f'data/{exp}-{version}_noticed.csv', schema=notice_schema)
+        .with_columns(parent = pl.when(pl.col('grouped')).then(pl.lit('Grouped')).otherwise(pl.lit('Alone')).cast(parent))
+        .select(pl.all().exclude('grouped'))
+    )
+    return (noticed_df,)
+
+
+@app.cell
+def _(noticed_df):
+    noticed_df
+    return
+
+
+@app.cell
+def _(noticed_df, pl):
+    noticed_by_group = (
+        noticed_df
+            .group_by('parent')
+            .agg(pl.mean('noticed'), pl.len())
+            .sort('parent')
+    )
+    print(noticed_by_group)
+    return
+
+
+@app.cell
+def _(noticed_df, pl):
+    noticed_by_scene = (
+        noticed_df
+            .group_by('scene', 'parent')
+            .agg(pl.mean('noticed'), pl.len())
+            .sort('parent')
+    )
+    print(noticed_by_scene)
+    return
+
+
+if __name__ == "__main__":
+    app.run()

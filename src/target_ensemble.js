@@ -1,7 +1,7 @@
 /**
  * @title Event counting
  * @description Count the number of times objects bounce
- * @version TE-0.1.0
+ * @version 0.1.0
  *
  * @assets assets/
  */
@@ -27,25 +27,21 @@ import {
   initConditionCounts,
 } from "./conditions.js";
 // Prolific variables
-const PROLIFIC_URL = "https:app.prolific.com/submissions/complete?cc=C1AE31ZY";
+const PROLIFIC_URL = "https:app.prolific.com/submissions/complete?cc=C1EB8IGX";
 
 // Define global experiment variables
 const OBJ_RADIUS = 20;
 const nscenes = 6;
 const scenes = [...Array(nscenes).keys()];
-const parents = ["tgt", "dis"];
-const colors = ["light", "dark"];
+const parents = ["ensemble", "lone"];
 const CONDITIONS = scenes.flatMap((scene) =>
-  parents.flatMap((parent) =>
-    colors.map((color) => ({
+  parents.map((parent) => ({
       scene: scene,
       parent: parent,
-      color: color,
-    })),
-  ),
+  })),
 );
 const NCOND = CONDITIONS.length;
-const NTRIALS = 6;
+const NTRIALS = 5;
 const MAXBOUNCES = 10;
 const COUNT_LABELS = [...Array(MAXBOUNCES + 1).keys()].map((x) => `${x}`);
 // const TIME_PER_TRIAL = dataset[0].positions.length / 24;
@@ -66,14 +62,15 @@ function gen_trial(
   scene,
   measure_count = true,
   show_gorilla = false,
-  parent = "tgt",
+  parent = "ensemble",
   appearance = "ib-target",
 ) {
   const display_width = MOT_WIDTH * CHINREST_SCALE;
   const display_height = MOT_HEIGHT * CHINREST_SCALE;
   let parent_idx = -1;
   if (show_gorilla) {
-    parent_idx = parent == "tgt" ? 0 : 4;
+    // ENSEMBLE | LONE TARGET
+    parent_idx = parent == "ensemble" ? 0 : 3;
   }
   const tracking = {
     type: IBPlugin,
@@ -83,7 +80,7 @@ function gen_trial(
     distractor_class: "ib-distractor",
     target_class: "ib-target",
     parent: parent_idx,
-    gorilla_class: appearance == "light" ? "ib-target" : "ib-distractor",
+    gorilla_class: "ib-target",
     probe_class: "ib-probe",
     display_width: display_width,
     display_height: display_height,
@@ -161,18 +158,17 @@ function trialsFromCondition(jsPsych, dataset, condition) {
   let trials = [];
   for (let i = 1; i < NTRIALS; i++) {
     const tidx = (condition.scene + i) % nscenes;
-    trials.push(gen_trial(jsPsych, i, dataset.trials[tidx]));
+    trials.push(gen_trial(jsPsych, tidx + 1, dataset.trials[tidx]));
   }
   trials = jsPsych.randomization.repeat(trials, 1);
   trials.push(
     gen_trial(
       jsPsych,
-      NTRIALS,
+      condition.scene + 1,
       dataset.trials[condition.scene],
       true,
       true,
       condition.parent,
-      condition.color,
     ),
   );
   return trials;
@@ -193,10 +189,6 @@ export async function run({
   let prolific_id = "";
   let cond_idx = -1;
 
-  if (typeof jatos !== "undefined") {
-    await initConditionCounts(CONDITIONS.length);
-  }
-
   const jsPsych = initJsPsych({
     show_progress_bar: true,
     on_finish: () => {
@@ -210,9 +202,16 @@ export async function run({
     },
   });
 
-  prolific_id =
-    jsPsych.data.getURLVariable("prolific_pid") ||
-    `UNKNOWN_${jsPsych.randomization.randomID()}`;
+  if (typeof jatos !== "undefined") {
+    await initConditionCounts(CONDITIONS.length);
+    prolific_id = jatos.urlQueryParameters.PROLIFIC_PID ||
+      `UNKNOWN_${jsPsych.randomization.randomID()}`;
+  } else {
+    prolific_id = `UNKNOWN_${jsPsych.randomization.randomID()}`;
+  }
+
+
+  console.log(prolific_id);
 
   cond_idx = await assignCondition(prolific_id, CONDITIONS.length);
   const condition = CONDITIONS[cond_idx];
