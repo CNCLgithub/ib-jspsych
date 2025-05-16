@@ -1,7 +1,7 @@
 /**
  * @title Event counting
  * @description Count the number of times objects bounce
- * @version 0.1.0
+ * @version swapped-0.1.0
  *
  * @assets assets/
  */
@@ -30,14 +30,20 @@ import {
 const PROLIFIC_URL = "https:app.prolific.com/submissions/complete?cc=C1EB8IGX";
 
 // Define global experiment variables
+const SWAP_APEARANCE = true; // for control experiment
+const TARGET = `<span style="color:#808080;"><b>LIGHT</b></span>`;
+// const TARGET = SWAP_APEARANCE
+//   ? `<span style="color:#303030;"><b>DARK</b></span>`
+//   : `<span style="color:#808080;"><b>LIGHT</b></span>`;
+
 const OBJ_RADIUS = 20;
 const nscenes = 6;
 const scenes = [...Array(nscenes).keys()];
 const parents = ["ensemble", "lone"];
 const CONDITIONS = scenes.flatMap((scene) =>
   parents.map((parent) => ({
-      scene: scene,
-      parent: parent,
+    scene: scene,
+    parent: parent,
   })),
 );
 const NCOND = CONDITIONS.length;
@@ -77,10 +83,10 @@ function gen_trial(
     scene: scene,
     targets: 4,
     object_radius: OBJ_RADIUS,
-    distractor_class: "ib-distractor",
-    target_class: "ib-target",
+    distractor_class: SWAP_APEARANCE ? "ib-target" : "ib-distractor",
+    target_class: SWAP_APEARANCE ? "ib-distractor" : "ib-target",
     parent: parent_idx,
-    gorilla_class: "ib-target",
+    gorilla_class: SWAP_APEARANCE ? "ib-distractor" : "ib-target",
     probe_class: "ib-probe",
     display_width: display_width,
     display_height: display_height,
@@ -90,6 +96,7 @@ function gen_trial(
     flip_width: jsPsych.randomization.sampleBernoulli(0.5),
     world_scale: 720.0, // legacy datasets are +- 400 units
     premotion_dur: 2000.0,
+    count_prompt: `<p>Count the number of times the ${TARGET} objects bounce off the walls</p>`,
     show_prompt: measure_count,
     // step_dur: 100.0,
   };
@@ -204,12 +211,12 @@ export async function run({
 
   if (typeof jatos !== "undefined") {
     await initConditionCounts(CONDITIONS.length);
-    prolific_id = jatos.urlQueryParameters.PROLIFIC_PID ||
+    prolific_id =
+      jatos.urlQueryParameters.PROLIFIC_PID ||
       `UNKNOWN_${jsPsych.randomization.randomID()}`;
   } else {
     prolific_id = `UNKNOWN_${jsPsych.randomization.randomID()}`;
   }
-
 
   console.log(prolific_id);
 
@@ -319,7 +326,7 @@ export async function run({
   instruct_tl.push({
     type: InstructionsPlugin,
     pages: [
-      "Your task is to count the number of times the light objects bounce against the walls of the display.<br>" +
+      `Your task is to count the number of times the ${TARGET} objects bounce against the walls of the display.<br>` +
         `At the end of each instance of the task, you will respond using a slider.<br>` +
         `If you lost count of the number of bounces, just make your best guess.<br>` +
         "Click <b>Next</b> to give it a try.",
@@ -357,8 +364,8 @@ export async function run({
         prompt: "Which of the following is <b>TRUE</b>",
         name: "check1",
         options: [
-          "A) Before motion, you have to click on all of the light objects",
-          "B) The main task is to count the number of bounces from light objects",
+          `A) Before motion, you have to click on all of the LIGHT objects`,
+          `B) The main task is to count the number of bounces from LIGHT objects`,
           "C) Only respond if you are 100% sure about the answer",
         ],
         required: true,
