@@ -7,6 +7,7 @@
     "jatos": "npm run jspsych -- build --jatos"
   },
   "dependencies": {
+    "@jspsych/plugin-call-function": "^2.1.0",
     "@jspsych/plugin-external-html": "^2.1.0",
     "@jspsych/plugin-fullscreen": "^2.1.0",
     "@jspsych/plugin-html-button-response": "^2.1.0",
