@@ -74,89 +74,178 @@ export function parseDataset(data, buffer) {
   }
 }
 
-export async function initConditionCounts(ncond = 24) {
-  if (typeof jatos === "undefined") {
-    console.log("Not in JATOS, nothing to initialize...");
-    return Math.floor(Math.random() * ncond);
-  }
-  // Check if 'conditions' are not already in the batch session
-  if (!jatos.batchSession.defined("/conditions")) {
-    console.log(
-      "No exisiting Batch data found, initializing condition counts...",
-    );
-    const conditionCounts = Array(ncond).fill(0);
-    const batchData = {
-      conditions: conditionCounts,
-      candidates: {},
-    };
-    // Put the conditions in the batch session
-    await jatos.batchSession
-      .setAll(batchData)
-      .then(() => {
-        console.log("Initialized Batch Data successfully");
-      })
-      .fail(() => {
-        console.error("Cound not init conditions");
-      });
-  }
+/*
+  BALANCING LOGIC
+*/
+
+async function withTimeout(procedure, timeoutMs) {
+  const timeout = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error("Operation timed out")), timeoutMs);
+  });
+  return Promise.race([procedure(), timeout]);
 }
 
-export async function assignCondition(prolific_id, ncond = 24) {
-  if (typeof jatos === "undefined") {
-    console.log("Not in JATOS, sampling random condition");
-    return Math.floor(Math.random() * ncond);
-  }
-  console.log("In JATOS, retrieving batch session info...");
+function tallyCounts(n) {
+  const completed = jatos.batchSession.find("/completed");
+  const pending = jatos.batchSession.find("/pending");
+  const ccounts = Array(n).fill(0);
+  const pcounts = Array(n).fill(0);
+  Object.entries(completed).forEach(([key, value]) => {
+    ccounts[value]++;
+  });
+  Object.entries(pending).forEach(([key, value]) => {
+    pcounts[value]++;
+  });
+  return [ccounts, pcounts];
+}
+
+async function unsafeAssignCond(prolific_pid, ncond) {
   // Already assigned
-  if (jatos.batchSession.defined(`/candidates/${prolific_id}`)) {
-    const candidate = jatos.batchSession
-      .find(`/candidates/${prolific_pid}`)
-      .fail(() =>
-        console.error(`Found record but could not read ${prolific_id}`),
-      );
-    return candidate;
+  if (jatos.batchSession.defined(`/pending/${prolific_pid}`)) {
+    const assignment = jatos.batchSession
+      .find(`/pending/${prolific_pid}`)
+      .then(() => {
+        console.log(`Found pending for ${prolific_pid}`);
+      })
+      .fail((error) => {
+        console.error(`Could not retrieve pending for ${prolific_pid}:`,
+                      error, '\nretrying...');
+        unsafeAssignCond(prolific_pid, ncond);
+      });
+    return assignment;
   }
-  console.log(
-    `No candidates assigned to ${prolific_id}; Sampling assignment...`,
-  );
-  console.log(jatos.batchSession.getAll());
-  // Otherwise, sample randomly
-  let conditions = jatos.batchSession.find("/conditions");
-  console.log("Conditions ", conditions);
-  const minCount = Math.min(...conditions);
-  const eligibleConditions = conditions.flatMap((c, i) =>
+
+  console.log(`Generating new assignment for ${prolific_pid} ...`);
+  // Find conditions that are not "full"
+  const [completed, pending] = tallyCounts(ncond);
+  console.log("Completed ", completed);
+  console.log("Pending ", pending);
+  let minCount = Math.min(...completed);
+  const eligibleConditions = completed.flatMap((c, i) =>
     c === minCount ? i : [],
   );
-  console.log(`eligible conditions: ${eligibleConditions}`);
-  const candidateCondition =
-    eligibleConditions[Math.floor(Math.random() * eligibleConditions.length)];
-
+  console.log("Eligible conditions ", eligibleConditions);
+  const eligiblePending = eligibleConditions.map((i) => pending[i]);
+  console.log("Eligible pending ", eligiblePending);
+  const minPending = Math.min(...eligiblePending);
+  const candidates = eligiblePending.flatMap((c, i) =>
+    c === minPending ? i : [],
+  );
+  console.log("Candidates ", candidates);
+  const candidateIdx =
+    candidates[Math.floor(Math.random() * candidates.length)];
+  const candidateCondition = eligibleConditions[candidateIdx];
   console.log(`Selected condition: ${candidateCondition}`);
-
   await jatos.batchSession
-    .add(`/candidates/${prolific_id}`, candidateCondition)
-    .fail(() => {
-      console.error(`Could not assign ${prolific_id} to ${candidateCondition}`);
+    .add(`/pending/${prolific_pid}`, candidateCondition)
+    .then(() => {
+      console.log(
+        `Successfully assigned ${prolific_pid} to ${candidateCondition}`,
+      );
+    })
+    .fail((error) => {
+      console.error(
+        `Failed to assign ${prolific_pid} to ${candidateCondition}:\n`,
+        error, `/n...retrying`,
+      );
+      unsafeAssignCond(prolific_pid, ncond);
     });
   return candidateCondition;
 }
 
-export async function confirmCondition(prolific_pid, cond_idx) {
+async function unsafeConfirmCondition(prolific_pid) {
   if (typeof jatos === "undefined") {
     console.log("Not in JATOS, doing nothing.");
     return;
   }
   // No longer in database
-  if (!jatos.batchSession.defined(`/candidates/${prolific_pid}`)) {
-    console.error(`Condition not confirmable for ${prolific_pid}`);
+  if (!jatos.batchSession.defined(`/pending/${prolific_pid}`)) {
+    console.error(`Pending record for ${prolific_pid} not found!`);
   }
-  const count = jatos.batchSession.find(`/conditions/${cond_idx}`);
+  if (jatos.batchSession.defined(`/completed/${prolific_pid}`)) {
+    console.error(`${prolific_pid} already marked as completed! Doing nothing`);
+    return;
+  }
   await jatos.batchSession
-    .replace(`/conditions/${cond_idx}`, count + 1)
+    .move(`/pending/${prolific_pid}`, `/completed/${prolific_pid}`)
     .then(() => {
-      jatos.batchSession.remove(`/candidates/${prolific_pid}`);
+      console.log(`Successfully confirmed ${prolific_pid} as completed`);
     })
-    .fail(() => {
-      console.error("Cound not update candidates record");
+    .fail((error) => {
+      console.error(`Failed to confirm ${prolific_pid} as completed\n`,
+                    error,
+                    '\n...retrying');
+      unsafeConfirmCondition(prolific_pid);
+    });
+}
+
+/*
+  BALANCING API
+*/
+
+const LOCK_TIMEOUT = 10 * 1000; // in ms
+
+export async function initBatchSession() {
+  if (typeof jatos === "undefined") {
+    console.log("Not in JATOS, nothing to initialize...");
+    return;
+  }
+  // Check if 'conditions' are not already in the batch session
+  if (jatos.batchSession.defined("/completed")) {
+    console.log("Found exisisting Batch session");
+    return;
+  }
+  console.log(
+    "No exisiting Batch session found, initializing...",
+  );
+  const batchData = {
+    completed: {},
+    pending: {},
+  };
+  // Put the conditions in the batch session
+  await jatos.batchSession
+             .setAll(batchData)
+             .then(() => {
+               console.log(
+                 "Successfully initialized Batch session"
+               );
+             })
+             .fail((error) => {
+               console.error(
+                 "Failed to initialized Batch session\n",
+                 error,
+                 "\n..retrying"
+               );
+               initBatchSession();
+             });
+}
+
+export async function assignCondition(prolific_pid, ncond) {
+  if (typeof jatos === "undefined") {
+    console.log("Not in JATOS, generating random assignment");
+    return Math.floor(Math.random() * ncond);
+  }
+  console.log("In JATOS");
+  const assignment = await withTimeout(
+    () => unsafeAssignCond(prolific_pid, ncond),
+    LOCK_TIMEOUT,
+  ).catch((error) => {
+    console.error("Timed out while generating assignment: ", error);
+    return Math.floor(Math.random() * ncond);
+  });
+  return assignment;
+}
+
+export async function confirmCondition(prolific_pid) {
+  if (typeof jatos === "undefined") {
+    console.log("Not in JATOS, doing nothing.");
+    return;
+  }
+  console.log("In JATOS");
+  await withTimeout(
+    () => unsafeConfirmCondition(prolific_pid),
+    LOCK_TIMEOUT)
+    .catch((error) => {
+      console.error("Timed out while confirming assignment: ", error);
     });
 }

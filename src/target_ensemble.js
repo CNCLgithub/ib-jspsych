@@ -6,16 +6,20 @@
  * @assets assets/
  */
 
+
+/*
+  IMPORTS
+*/
+
 // You can import stylesheets (.scss or .css).
 import "../styles/main.scss";
 // Plugins
 import PreloadPlugin from "@jspsych/plugin-preload";
 import FullscreenPlugin from "@jspsych/plugin-fullscreen";
 import SurveyTextPlugin from "@jspsych/plugin-survey-text";
-import SurveyMultiChoicePlugin from "@jspsych/plugin-survey-multi-choice";
-import ExternalHtmlPlugin from "@jspsych/plugin-external-html";
-// import VirtualChinrestPlugin from '@jspsych/plugin-virtual-chinrest';
 import InstructionsPlugin from "@jspsych/plugin-instructions";
+import ExternalHtmlPlugin from "@jspsych/plugin-external-html";
+import SurveyMultiChoicePlugin from "@jspsych/plugin-survey-multi-choice";
 import HTMLButtonResponsePlugin from "@jspsych/plugin-html-button-response";
 import HTMLSliderResponsePlugin from "@jspsych/plugin-html-slider-response";
 import IBPlugin from "./plugins/ib.ts";
@@ -24,19 +28,21 @@ import {
   parseDataset,
   assignCondition,
   confirmCondition,
-  initConditionCounts,
+  initBatchSession,
 } from "./conditions.js";
+
+
+/*
+  GLOBAL VARIABLES
+*/
+
 // Prolific variables
 const PROLIFIC_URL = "https:app.prolific.com/submissions/complete?cc=C1EB8IGX";
 
 // Define global experiment variables
 const SWAP_APEARANCE = true; // for control experiment
 const TARGET = `<span style="color:#808080;"><b>LIGHT</b></span>`;
-// const TARGET = SWAP_APEARANCE
-//   ? `<span style="color:#303030;"><b>DARK</b></span>`
-//   : `<span style="color:#808080;"><b>LIGHT</b></span>`;
-
-const OBJ_RADIUS = 20;
+const OBJ_RADIUS = 20; // in world units
 const nscenes = 6;
 const scenes = [...Array(nscenes).keys()];
 const parents = ["ensemble", "lone"];
@@ -54,28 +60,30 @@ const COUNT_LABELS = [...Array(MAXBOUNCES + 1).keys()].map((x) => `${x}`);
 var EXP_DURATION = 5; //  in minutes
 const MOT_WIDTH = 720; // pixels
 const MOT_HEIGHT = 480; // pixels
+// NOT USED: FOR CHINREST
 // const STIM_DEG = 10;
 // const PIXELS_ER_UNIT = MOT_DIM / STIM_DEG;
-var CHINREST_SCALE = 1.0; // to adjust pixel dimensions
+// var CHINREST_SCALE = 1.0; // to adjust pixel dimensions
+
 // Debug Variables
 const SKIP_INSTRUCTIONS = false;
 // const SKIP_INSTRUCTIONS = true;
 // const SKIP_PROLIFIC_ID = true;
 
-function gen_trial(
-  jsPsych,
-  trial_id,
-  scene,
-  measure_count = true,
-  show_gorilla = false,
-  parent = "ensemble",
-  appearance = "ib-target",
-) {
-  const display_width = MOT_WIDTH * CHINREST_SCALE;
-  const display_height = MOT_HEIGHT * CHINREST_SCALE;
+
+/*
+  EXP LOGIC
+*/
+
+function gen_trial(jsPsych, trial_id, scene,
+                   measure_count = true,
+                   show_gorilla = false,
+                   parent = "ensemble",
+                   appearance = "ib-target",
+                  ) {
   let parent_idx = -1;
   if (show_gorilla) {
-    // ENSEMBLE | LONE TARGET
+    // 0 => ENSEMBLE | 3 => LONE TARGET
     parent_idx = parent == "ensemble" ? 0 : 3;
   }
   const tracking = {
@@ -88,8 +96,8 @@ function gen_trial(
     parent: parent_idx,
     gorilla_class: SWAP_APEARANCE ? "ib-distractor" : "ib-target",
     probe_class: "ib-probe",
-    display_width: display_width,
-    display_height: display_height,
+    display_width: MOT_WIDTH,
+    display_height: MOT_HEIGHT,
     flip_height: false,
     flip_width: false,
     flip_height: jsPsych.randomization.sampleBernoulli(0.5),
@@ -107,7 +115,7 @@ function gen_trial(
     sub_tl.push({
       type: HTMLSliderResponsePlugin,
       stimulus:
-        `<div style="width:${display_width}px;">` +
+        `<div style="width:${MOT_WIDTH}px;">` +
         `<p>How many times did the targets bounce?</p></div>`,
       require_movement: true,
       labels: COUNT_LABELS,
@@ -122,7 +130,7 @@ function gen_trial(
       type: HTMLButtonResponsePlugin,
       choices: ["Yes", "No"],
       stimulus:
-        `<div style="width:${display_width}px;">` +
+        `<div style="width:${MOT_WIDTH}px;">` +
         `<p>Did you notice anything unusual or out of the ` +
         ` ordinary while performing the last trial?</p></div>`,
     });
@@ -131,7 +139,7 @@ function gen_trial(
       questions: [
         {
           prompt:
-            `<div style="width:${display_width}px;">` +
+            `<div style="width:${MOT_WIDTH}px;">` +
             `<p>Please, describe what you noticed.</p></div>`,
           required: true,
         },
@@ -198,10 +206,10 @@ export async function run({
 
   const jsPsych = initJsPsych({
     show_progress_bar: true,
-    on_finish: () => {
+    on_finish: async () => {
       if (typeof jatos !== "undefined") {
         // in jatos environment
-        confirmCondition(prolific_id, cond_idx);
+        await confirmCondition(prolific_id);
         jatos.endStudyAndRedirect(PROLIFIC_URL, jsPsych.data.get().json());
       } else {
         return jsPsych;
@@ -210,7 +218,7 @@ export async function run({
   });
 
   if (typeof jatos !== "undefined") {
-    await initConditionCounts(CONDITIONS.length);
+    await initBatchSession();
     prolific_id =
       jatos.urlQueryParameters.PROLIFIC_PID ||
       `UNKNOWN_${jsPsych.randomization.randomID()}`;
@@ -231,7 +239,6 @@ export async function run({
   const EXAMPLESBUFFER = await EXAMPLESRAW.arrayBuffer();
   const EXAMPLES = parseDataset(EXAMPLESRAW, EXAMPLESBUFFER);
 
-  // REVIEW: add more examples?
   const EXAMPLE1 = EXAMPLES.trials[0];
   const EXAMPLE2 = EXAMPLES.trials[1];
   const EXAMPLE3 = EXAMPLES.trials[2];
