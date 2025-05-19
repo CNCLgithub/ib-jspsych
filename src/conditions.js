@@ -1,10 +1,16 @@
 import protobuf from "protobufjs";
 
-// Must update accordingly
+/*
+  GLOBAL VARIABLES
+*/
 const SERVER_PATH = "78.141.233.16";
 const SERVER_PORT = "3001";
 const SERVER_URL = `http://${SERVER_PATH}:${SERVER_PORT}`;
+const LOCK_TIMEOUT = 10 * 1000; // in ms
 
+/*
+  DATASET FORMAT
+*/
 const protoSchema = `
 
 syntax = "proto3";
