@@ -1,7 +1,7 @@
 /**
  * @title Event counting
  * @description Count the number of times objects bounce
- * @version swapped-0.1.0
+ * @version 0.2
  *
  * @assets assets/
  */
@@ -10,10 +10,8 @@
 /*
   IMPORTS
 */
-
-// You can import stylesheets (.scss or .css).
-import "../styles/main.scss";
-// Plugins
+// External deps
+import { initJsPsych } from "jspsych";
 import PreloadPlugin from "@jspsych/plugin-preload";
 import FullscreenPlugin from "@jspsych/plugin-fullscreen";
 import SurveyTextPlugin from "@jspsych/plugin-survey-text";
@@ -22,8 +20,9 @@ import ExternalHtmlPlugin from "@jspsych/plugin-external-html";
 import SurveyMultiChoicePlugin from "@jspsych/plugin-survey-multi-choice";
 import HTMLButtonResponsePlugin from "@jspsych/plugin-html-button-response";
 import HTMLSliderResponsePlugin from "@jspsych/plugin-html-slider-response";
+// Local deps
+import "../styles/main.scss";
 import IBPlugin from "./plugins/ib.ts";
-import { initJsPsych } from "jspsych";
 import {
   parseDataset,
   assignCondition,
@@ -35,12 +34,11 @@ import {
 /*
   GLOBAL VARIABLES
 */
-
-// Prolific variables
+// EXPERIMENT VARIABLES!!
+const SWAP_APPEARANCE = false; // for control experiment
+const NTRIALS = 5;
+// Fallback URL; Normally set under JATOS -> Redirect URL
 const PROLIFIC_URL = "https:app.prolific.com/submissions/complete?cc=C1EB8IGX";
-
-// Define global experiment variables
-const SWAP_APEARANCE = true; // for control experiment
 const TARGET = `<span style="color:#808080;"><b>LIGHT</b></span>`;
 const OBJ_RADIUS = 20; // in world units
 const nscenes = 6;
@@ -53,7 +51,6 @@ const CONDITIONS = scenes.flatMap((scene) =>
   })),
 );
 const NCOND = CONDITIONS.length;
-const NTRIALS = 5;
 const MAXBOUNCES = 10;
 const COUNT_LABELS = [...Array(MAXBOUNCES + 1).keys()].map((x) => `${x}`);
 // const TIME_PER_TRIAL = dataset[0].positions.length / 24;
@@ -68,7 +65,6 @@ const MOT_HEIGHT = 480; // pixels
 // Debug Variables
 const SKIP_INSTRUCTIONS = false;
 // const SKIP_INSTRUCTIONS = true;
-// const SKIP_PROLIFIC_ID = true;
 
 
 /*
@@ -91,10 +87,10 @@ function gen_trial(jsPsych, trial_id, scene,
     scene: scene,
     targets: 4,
     object_radius: OBJ_RADIUS,
-    distractor_class: SWAP_APEARANCE ? "ib-target" : "ib-distractor",
-    target_class: SWAP_APEARANCE ? "ib-distractor" : "ib-target",
+    distractor_class: SWAP_APPEARANCE ? "ib-target" : "ib-distractor",
+    target_class: SWAP_APPEARANCE ? "ib-distractor" : "ib-target",
     parent: parent_idx,
-    gorilla_class: SWAP_APEARANCE ? "ib-distractor" : "ib-target",
+    gorilla_class: SWAP_APPEARANCE ? "ib-distractor" : "ib-target",
     probe_class: "ib-probe",
     display_width: MOT_WIDTH,
     display_height: MOT_HEIGHT,
@@ -242,7 +238,6 @@ export async function run({
   const EXAMPLE1 = EXAMPLES.trials[0];
   const EXAMPLE2 = EXAMPLES.trials[1];
   const EXAMPLE3 = EXAMPLES.trials[2];
-  const N_TRIALS = DATASET.trials.length;
 
   // Consent
   timeline.push({
@@ -314,7 +309,7 @@ export async function run({
 
       `We know it is also difficult to stay focused for so long, especially when you are doing the same ` +
         `thing over and over.<br> But remember, the experiment will be all over in less than ${EXP_DURATION} minutes.` +
-        ` There are <strong>${N_TRIALS} trials</strong> in this study. <br>` +
+        ` There are <strong>${NTRIALS} trials</strong> in this study. <br>` +
         `Please do your best to remain focused! ` +
         ` Your responses will only be useful to us if you remain focused. <br><br>` +
         `Click <b>Next</b> to continue.`,

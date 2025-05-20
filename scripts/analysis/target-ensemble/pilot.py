@@ -28,15 +28,7 @@ def versioning():
 
 
 @app.cell
-def _(exp, pl, version):
-    count_schema = {
-        "uid": pl.UInt16,
-        "scene": pl.UInt8,
-        "count": pl.UInt8,
-        "rt": pl.Float32,
-        "order": pl.UInt8,
-    }
-
+def notice(exp, pl, version):
     parent = pl.Enum(["Grouped", "Alone"])
     notice_schema = {
         "uid": pl.UInt16,
@@ -47,8 +39,6 @@ def _(exp, pl, version):
         "rt": pl.Float32,
         "order": pl.UInt8,
     }
-
-    count_df = pl.read_csv(f"data/{exp}-{version}_counts.csv", schema=count_schema)
     noticed_df = (
         pl.read_csv(f"data/{exp}-{version}_noticed.csv", schema=notice_schema)
         .with_columns(
@@ -60,6 +50,24 @@ def _(exp, pl, version):
         .select(pl.all().exclude("grouped"))
     )
     return (noticed_df,)
+
+
+@app.cell
+def counts(exp, pl, version):
+    count_schema = {
+        "uid": pl.UInt16,
+        "scene": pl.UInt8,
+        "count": pl.UInt8,
+        "rt": pl.Float32,
+        "order": pl.UInt8,
+    }
+    count_df = pl.read_csv(f"data/{exp}-{version}_counts.csv", schema=count_schema)
+    print(
+        count_df
+        .group_by('uid')
+        .agg(pl.len())
+    )
+    return
 
 
 @app.cell
