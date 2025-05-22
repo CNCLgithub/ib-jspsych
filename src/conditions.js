@@ -190,6 +190,9 @@ export async function initBatchSession() {
   if (typeof jatos === "undefined") {
     console.log("Not in JATOS, nothing to initialize...");
     return;
+  } else {
+    // random slow down to prevent race conditions
+    await new Promise(r => setTimeout(r, 200 + 1000 * Math.random()));
   }
   // Check if 'conditions' are not already in the batch session
   if (jatos.batchSession.defined("/completed")) {
@@ -225,6 +228,8 @@ export async function assignCondition(prolific_pid, ncond) {
   if (typeof jatos === "undefined") {
     console.log("Not in JATOS, generating random assignment");
     return Math.floor(Math.random() * ncond);
+  } else {
+    await new Promise(r => setTimeout(r, 200 + 1000 * Math.random()));
   }
   console.log("In JATOS");
   const assignment = await withTimeout(
@@ -241,8 +246,10 @@ export async function confirmCondition(prolific_pid) {
   if (typeof jatos === "undefined") {
     console.log("Not in JATOS, doing nothing.");
     return;
+  } else {
+    console.log("In JATOS");
+    await new Promise(r => setTimeout(r, 200 + 1000 * Math.random()));
   }
-  console.log("In JATOS");
   await withTimeout(
     () => unsafeConfirmCondition(prolific_pid),
     LOCK_TIMEOUT)

@@ -7,7 +7,7 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     import marimo as mo
-    return
+    return (mo,)
 
 
 @app.cell
@@ -22,8 +22,8 @@ def _():
 
 @app.cell
 def versioning():
-    exp = "target-ensemble-swapped"
-    version = "pilot-v1"
+    exp = "target-ensemble"
+    version = "pilot-v2"
     return exp, version
 
 
@@ -62,11 +62,7 @@ def counts(exp, pl, version):
         "order": pl.UInt8,
     }
     count_df = pl.read_csv(f"data/{exp}-{version}_counts.csv", schema=count_schema)
-    print(
-        count_df
-        .group_by('uid')
-        .agg(pl.len())
-    )
+    print(count_df.group_by("uid").agg(pl.len()))
     return
 
 
@@ -90,11 +86,16 @@ def _(noticed_df, pl):
 @app.cell
 def _(noticed_df, pl):
     noticed_by_scene = (
-        noticed_df.group_by("parent")
+        noticed_df.group_by("scene", "parent")
         .agg(pl.mean("noticed"), pl.len())
-        .sort("parent")
+        .sort("scene", "parent")
     )
-    print(noticed_by_scene)
+    return (noticed_by_scene,)
+
+
+@app.cell
+def _(mo, noticed_by_scene):
+    mo.ui.table(noticed_by_scene)
     return
 
 
