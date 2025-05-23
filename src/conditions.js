@@ -186,74 +186,67 @@ async function unsafeConfirmCondition(prolific_pid) {
   BALANCING API
 */
 
-export async function initBatchSession() {
-  if (typeof jatos === "undefined") {
-    console.log("Not in JATOS, nothing to initialize...");
-    return;
-  } else {
-    // random slow down to prevent race conditions
-    await new Promise(r => setTimeout(r, 200 + 1000 * Math.random()));
-  }
-  // Check if 'conditions' are not already in the batch session
-  if (jatos.batchSession.defined("/completed")) {
-    console.log("Found exisisting Batch session");
-    return;
-  }
-  console.log(
-    "No exisiting Batch session found, initializing...",
-  );
-  const batchData = {
-    completed: {},
-    pending: {},
-  };
-  // Put the conditions in the batch session
-  await jatos.batchSession
-             .setAll(batchData)
-             .then(() => {
-               console.log(
-                 "Successfully initialized Batch session"
-               );
-             })
-             .fail((error) => {
-               console.error(
-                 "Failed to initialized Batch session\n",
-                 error,
-                 "\n..retrying"
-               );
-               initBatchSession();
-             });
-}
+// export async function initBatchSession() {
+//   if (typeof jatos === "undefined") {
+//     console.log("Not in JATOS, nothing to initialize...");
+//     return;
+//   } else {
+//     // random slow down to prevent race conditions
+//     await new Promise(r => setTimeout(r, 200 + 1000 * Math.random()));
+//   }
+//   // Check if 'conditions' are not already in the batch session
+//   if (jatos.batchSession.defined("/completed")) {
+//     console.log("Found exisisting Batch session");
+//     return;
+//   }
+//   console.log(
+//     "No exisiting Batch session found, initializing...",
+//   );
+//   const batchData = {
+//     completed: {},
+//     pending: {},
+//   };
+//   // Put the conditions in the batch session
+//   await jatos.batchSession
+//              .setAll(batchData)
+//              .then(() => {
+//                console.log(
+//                  "Successfully initialized Batch session"
+//                );
+//              })
+//              .fail((error) => {
+//                console.error(
+//                  "Failed to initialized Batch session\n",
+//                  error,
+//                  "\n..retrying"
+//                );
+//                initBatchSession();
+//              });
+// }
 
-export async function assignCondition(prolific_pid, ncond) {
-  if (typeof jatos === "undefined") {
-    console.log("Not in JATOS, generating random assignment");
-    return Math.floor(Math.random() * ncond);
-  } else {
-    await new Promise(r => setTimeout(r, 200 + 1000 * Math.random()));
-  }
-  console.log("In JATOS");
-  const assignment = await withTimeout(
-    () => unsafeAssignCond(prolific_pid, ncond),
-    LOCK_TIMEOUT,
-  ).catch((error) => {
-    console.error("Timed out while generating assignment: ", error);
-    return Math.floor(Math.random() * ncond);
-  });
-  return assignment;
-}
-
-export async function confirmCondition(prolific_pid) {
-  if (typeof jatos === "undefined") {
-    console.log("Not in JATOS, doing nothing.");
-    return;
-  } else {
-    console.log("In JATOS");
-    await new Promise(r => setTimeout(r, 200 + 1000 * Math.random()));
-  }
-  await withTimeout(
-    () => unsafeConfirmCondition(prolific_pid),
-    LOCK_TIMEOUT)
-    .catch((error) => {
-      console.error("Timed out while confirming assignment: ", error);
+export async function assignCondition(prolific_pid, session_id, ncond) {
+  try {
+    const response = await fetch(`http://localhost:3001/assign-condition?prolific_pid=${prolific_pid}&session_id=${session_id}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const data = await response.json();
+    return data.condition;
+  } catch (error) {
+    console.error('Error fetching candidate condition:', error);
+    // Fallback: Random assignment
+    return Math.floor(Math.random() * ncond);
+  }
+}
+
+export async function confirmCondition(prolific_pid, session_id) {
+  try {
+    await fetch('http://localhost:3001/confirm-condition', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prolific_pid, session_id })
+    });
+  } catch (error) {
+    console.error('Error confirming condition:', error);
+  }
 }
