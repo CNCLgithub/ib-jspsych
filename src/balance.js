@@ -46,14 +46,13 @@ export async function run({
   version,
 }) {
   let prolific_id = "";
-  let session_id = "XYZ";
+  let session_id = "UNKNOWN";
   let cond_idx = -1;
   const jsPsych = initJsPsych({
     show_progress_bar: true,
     on_finish: async () => {
+      await confirmCondition(prolific_id, session_id);
       if (typeof jatos !== "undefined") {
-        // in jatos environment
-        await confirmCondition(prolific_id, session_id);
         // const redirect = jatos.studyJsonInput.PROLIFIC_URL ||
         //       PROLIFIC_URL;
         // jatos.endStudyAndRedirect(redirect, jsPsych.data.get().json());
@@ -64,14 +63,16 @@ export async function run({
     },
   });
   if (typeof jatos !== "undefined") {
-    // await initBatchSession();
     prolific_id =
       jatos.urlQueryParameters.PROLIFIC_PID ||
       `UNKNOWN_${jsPsych.randomization.randomID()}`;
+    session_id = `${jatos.studyId}-${jatos.batchId}`;
+
   } else {
     prolific_id = `UNKNOWN_${jsPsych.randomization.randomID()}`;
   }
   cond_idx = await assignCondition(prolific_id, session_id, NCOND);
+  console.log('Assigned to condition ', cond_idx);
   const rand_rt = 1000 + Math.random() * 4000;
   const timeline = [{
     type: HTMLButtonResponsePlugin,

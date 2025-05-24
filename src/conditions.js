@@ -4,6 +4,9 @@ import protobuf from "protobufjs";
   GLOBAL VARIABLES
 */
 const LOCK_TIMEOUT = 10 * 1000; // in ms
+const dbserver = "http://localhost";
+// const dbserver = "http://78.141.233.16";
+const port = 3001;
 
 /*
   DATASET FORMAT
@@ -81,172 +84,89 @@ export function parseDataset(data, buffer) {
   BALANCING LOGIC
 */
 
-async function withTimeout(procedure, timeoutMs) {
-  const timeout = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error("Operation timed out")), timeoutMs);
-  });
-  return Promise.race([procedure(), timeout]);
-}
-
-function tallyCounts(n) {
-  const completed = jatos.batchSession.find("/completed");
-  const pending = jatos.batchSession.find("/pending");
-  const ccounts = Array(n).fill(0);
-  const pcounts = Array(n).fill(0);
-  Object.entries(completed).forEach(([key, value]) => {
-    ccounts[value]++;
-  });
-  Object.entries(pending).forEach(([key, value]) => {
-    pcounts[value]++;
-  });
-  return [ccounts, pcounts];
-}
-
-async function unsafeAssignCond(prolific_pid, ncond) {
-  // Already assigned
-  if (jatos.batchSession.defined(`/pending/${prolific_pid}`)) {
-    const assignment = jatos.batchSession
-      .find(`/pending/${prolific_pid}`)
-      .then(() => {
-        console.log(`Found pending for ${prolific_pid}`);
-      })
-      .fail((error) => {
-        console.error(`Could not retrieve pending for ${prolific_pid}:`,
-                      error, '\nretrying...');
-        unsafeAssignCond(prolific_pid, ncond);
-      });
-    return assignment;
-  }
-
-  console.log(`Generating new assignment for ${prolific_pid} ...`);
-  // Find conditions that are not "full"
-  const [completed, pending] = tallyCounts(ncond);
-  console.log("Completed ", completed);
-  console.log("Pending ", pending);
-  let minCount = Math.min(...completed);
-  const eligibleConditions = completed.flatMap((c, i) =>
-    c === minCount ? i : [],
-  );
-  console.log("Eligible conditions ", eligibleConditions);
-  const eligiblePending = eligibleConditions.map((i) => pending[i]);
-  console.log("Eligible pending ", eligiblePending);
-  const minPending = Math.min(...eligiblePending);
-  const candidates = eligiblePending.flatMap((c, i) =>
-    c === minPending ? i : [],
-  );
-  console.log("Candidates ", candidates);
-  const candidateIdx =
-    candidates[Math.floor(Math.random() * candidates.length)];
-  const candidateCondition = eligibleConditions[candidateIdx];
-  console.log(`Selected condition: ${candidateCondition}`);
-  await jatos.batchSession
-    .add(`/pending/${prolific_pid}`, candidateCondition)
-    .then(() => {
-      console.log(
-        `Successfully assigned ${prolific_pid} to ${candidateCondition}`,
-      );
+const assign_base = `${dbserver}:${port}/assign-condition`;
+async function unsafeAssignCond(prolific_pid, session_id) {
+  return fetch(
+    `${assign_base}?prolific_pid=${prolific_pid}&session_id=${session_id}`,
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    }
+  ).then(async (response) => {
+    if (!response.ok) {
+      throw new Error('Error parsing response from server', response);
+    }
+    const data = await response.json();
+    return data.condition;
+  })
+    .catch((error) => {
+      throw new Error(`Issue with server: ${error.message}`);
     })
-    .fail((error) => {
-      console.error(
-        `Failed to assign ${prolific_pid} to ${candidateCondition}:\n`,
-        error, `/n...retrying`,
-      );
-      unsafeAssignCond(prolific_pid, ncond);
-    });
-  return candidateCondition;
 }
 
-async function unsafeConfirmCondition(prolific_pid) {
-  if (typeof jatos === "undefined") {
-    console.log("Not in JATOS, doing nothing.");
-    return;
-  }
-  // No longer in database
-  if (!jatos.batchSession.defined(`/pending/${prolific_pid}`)) {
-    console.error(`Pending record for ${prolific_pid} not found!`);
-  }
-  if (jatos.batchSession.defined(`/completed/${prolific_pid}`)) {
-    console.error(`${prolific_pid} already marked as completed! Doing nothing`);
-    return;
-  }
-  await jatos.batchSession
-    .move(`/pending/${prolific_pid}`, `/completed/${prolific_pid}`)
-    .then(() => {
-      console.log(`Successfully confirmed ${prolific_pid} as completed`);
-    })
-    .fail((error) => {
-      console.error(`Failed to confirm ${prolific_pid} as completed\n`,
-                    error,
-                    '\n...retrying');
-      unsafeConfirmCondition(prolific_pid);
-    });
+const confirm_base = `${dbserver}:${port}/confirm-condition`;
+async function unsafeConfirmCondition(prolific_pid, session_id) {
+  return fetch(
+    confirm_base,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prolific_pid, session_id })
+    }
+  ).then((response) => {
+    if (!response.ok) {
+      throw new Error('Error parsing response from server', response);
+    }
+    console.log(
+      `Confirmed assignment of ${prolific_pid} to ${session_id} on server`
+    );
+  }).catch((error) => {
+      throw new Error(`Issue with server: ${error.message}`);
+  });
 }
 
 /*
   BALANCING API
 */
-
-// export async function initBatchSession() {
-//   if (typeof jatos === "undefined") {
-//     console.log("Not in JATOS, nothing to initialize...");
-//     return;
-//   } else {
-//     // random slow down to prevent race conditions
-//     await new Promise(r => setTimeout(r, 200 + 1000 * Math.random()));
-//   }
-//   // Check if 'conditions' are not already in the batch session
-//   if (jatos.batchSession.defined("/completed")) {
-//     console.log("Found exisisting Batch session");
-//     return;
-//   }
-//   console.log(
-//     "No exisiting Batch session found, initializing...",
-//   );
-//   const batchData = {
-//     completed: {},
-//     pending: {},
-//   };
-//   // Put the conditions in the batch session
-//   await jatos.batchSession
-//              .setAll(batchData)
-//              .then(() => {
-//                console.log(
-//                  "Successfully initialized Batch session"
-//                );
-//              })
-//              .fail((error) => {
-//                console.error(
-//                  "Failed to initialized Batch session\n",
-//                  error,
-//                  "\n..retrying"
-//                );
-//                initBatchSession();
-//              });
-// }
+async function retryPromise(promiseFunc, timeoutMs) {
+  const startTime = Date.now();
+  let error;
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      return await promiseFunc();
+    } catch (err) {
+      error = err.message;
+      // Wait briefly before retrying to prevent tight loops
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+  throw new Error(`Timeout reached (after ${timeoutMs}ms) before promise resolved: ${error}`);
+}
 
 export async function assignCondition(prolific_pid, session_id, ncond) {
-  try {
-    const response = await fetch(`http://localhost:3001/assign-condition?prolific_pid=${prolific_pid}&session_id=${session_id}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    const data = await response.json();
-    return data.condition;
-  } catch (error) {
-    console.error('Error fetching candidate condition:', error);
-    // Fallback: Random assignment
+  // Wait briefly before retrying to prevent tight loops
+  await new Promise(resolve => setTimeout(resolve, 250 + 1000*Math.random()));
+  const assignment = await retryPromise(
+    async () => unsafeAssignCond(prolific_pid, session_id),
+    LOCK_TIMEOUT,
+  ).catch((error) => {
+    console.error("Failed to generate assignment:\n ",
+      error,
+      "\n Falling back to random assignment.");
     return Math.floor(Math.random() * ncond);
-  }
+  });
+  return assignment;
 }
 
 export async function confirmCondition(prolific_pid, session_id) {
-  try {
-    await fetch('http://localhost:3001/confirm-condition', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prolific_pid, session_id })
-    });
-  } catch (error) {
-    console.error('Error confirming condition:', error);
-  }
+  // Wait briefly before retrying to prevent tight loops
+  await new Promise(resolve => setTimeout(resolve, 250 + 1000*Math.random()));
+  const assignment = await retryPromise(
+    async () => unsafeConfirmCondition(prolific_pid, session_id),
+    LOCK_TIMEOUT,
+  ).catch((error) => {
+    console.error("Failed to confirm assignment:\n ",
+      error,
+      "\n Exiting.");
+  });
 }
