@@ -53,9 +53,6 @@ export async function run({
     on_finish: async () => {
       await confirmCondition(prolific_id, session_id);
       if (typeof jatos !== "undefined") {
-        // const redirect = jatos.studyJsonInput.PROLIFIC_URL ||
-        //       PROLIFIC_URL;
-        // jatos.endStudyAndRedirect(redirect, jsPsych.data.get().json());
         jatos.endStudy(jsPsych.data.get().json());
       } else {
         return jsPsych;
@@ -73,14 +70,26 @@ export async function run({
   }
   cond_idx = await assignCondition(prolific_id, session_id, NCOND);
   console.log('Assigned to condition ', cond_idx);
-  const rand_rt = 1000 + Math.random() * 4000;
-  const timeline = [{
-    type: HTMLButtonResponsePlugin,
-    stimulus: '<p style="font-size:48px; color:green;">BLUE</p>',
-    choices: ['r', 'g', 'b'],
-    prompt: "<p>Is the ink color (r)ed, (g)reen, or (b)lue?</p>",
-    trial_duration: rand_rt,
-  }];
+  let trial;
+  if (Math.random() > 0.9) {
+    // never finishes
+    trial = {
+      type: HTMLButtonResponsePlugin,
+      stimulus: '<p style="font-size:48px; color:green;">BLUE</p>',
+      choices: ['r', 'g', 'b'],
+      prompt: "<p>Is the ink color (r)ed, (g)reen, or (b)lue?</p>",
+    };
+  } else {
+    const rand_rt = 1000 + Math.random() * 4000;
+    trial = {
+      type: HTMLButtonResponsePlugin,
+      stimulus: '<p style="font-size:48px; color:green;">BLUE</p>',
+      choices: ['r', 'g', 'b'],
+      prompt: "<p>Is the ink color (r)ed, (g)reen, or (b)lue?</p>",
+      trial_duration: rand_rt,
+    };
+  }
+  const timeline = [trial];
   await jsPsych.run(timeline);
   // Return the jsPsych instance so jsPsych Builder can access the experiment results (remove this
   // if you handle results yourself, be it here or in `on_finish()`)
