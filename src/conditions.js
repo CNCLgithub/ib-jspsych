@@ -4,8 +4,8 @@ import protobuf from "protobufjs";
   GLOBAL VARIABLES
 */
 const LOCK_TIMEOUT = 10 * 1000; // in ms
-const dbserver = "http://localhost";
-// const dbserver = "http://78.141.233.16";
+// const dbserver = "http://localhost";
+const dbserver = "http://78.141.233.16";
 const port = 3001;
 
 /*
