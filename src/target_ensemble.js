@@ -1,7 +1,7 @@
 /**
  * @title Event counting
  * @description Count the number of times objects bounce
- * @version 0.2
+ * @version 2025-06-09_W96KtK
  *
  * @assets assets/
  */
@@ -27,7 +27,6 @@ import {
   parseDataset,
   assignCondition,
   confirmCondition,
-  initBatchSession,
 } from "./conditions.js";
 
 
@@ -198,15 +197,15 @@ export async function run({
   version,
 }) {
   let prolific_id = "";
+  let session_id = "UNKNOWN";
   let cond_idx = -1;
 
   const jsPsych = initJsPsych({
     show_progress_bar: true,
     on_finish: async () => {
+      await confirmCondition(prolific_id, session_id);
       if (typeof jatos !== "undefined") {
-        // in jatos environment
-        await confirmCondition(prolific_id);
-        jatos.endStudyAndRedirect(PROLIFIC_URL, jsPsych.data.get().json());
+        jatos.endStudy(jsPsych.data.get().json());
       } else {
         return jsPsych;
       }
@@ -214,17 +213,19 @@ export async function run({
   });
 
   if (typeof jatos !== "undefined") {
-    await initBatchSession();
     prolific_id =
       jatos.urlQueryParameters.PROLIFIC_PID ||
       `UNKNOWN_${jsPsych.randomization.randomID()}`;
+    session_id = `${jatos.studyId}-${jatos.batchId}`;
+
   } else {
     prolific_id = `UNKNOWN_${jsPsych.randomization.randomID()}`;
   }
 
   console.log(prolific_id);
 
-  cond_idx = await assignCondition(prolific_id, CONDITIONS.length);
+  cond_idx = await assignCondition(prolific_id, session_id, NCOND);
+  console.log(`Assinged condition: ${cond_idx}`);
   const condition = CONDITIONS[cond_idx];
   const timeline = [];
   const DATASETRAW = await fetch("assets/dataset.bin", { method: "GET" });

@@ -23,8 +23,17 @@ def _():
 @app.cell
 def versioning():
     exp = "target-ensemble"
-    version = "pilot-v2"
+    version = "pilot-v1"
     return exp, version
+
+
+@app.cell
+def _(exp, pl):
+    col_count_schema = {"scene": pl.UInt8, "count": pl.Int64}
+    gt_counts = pl.read_csv(
+        f"data/{exp}_collision_counts.csv", schema=col_count_schema
+    )
+    return (gt_counts,)
 
 
 @app.cell
@@ -57,18 +66,48 @@ def counts(exp, pl, version):
     count_schema = {
         "uid": pl.UInt16,
         "scene": pl.UInt8,
-        "count": pl.UInt8,
+        "count": pl.Int64,
         "rt": pl.Float32,
         "order": pl.UInt8,
     }
-    count_df = pl.read_csv(f"data/{exp}-{version}_counts.csv", schema=count_schema)
-    print(count_df.group_by("uid").agg(pl.len()))
-    return
+    count_df = (
+        pl.read_csv(f"data/{exp}-{version}_counts.csv", schema=count_schema)
+        .with_columns(order = pl.col('order').rank().over('uid'))
+    )
+    print(count_df)
+    return (count_df,)
 
 
 @app.cell
 def _(noticed_df):
     noticed_df
+    return
+
+
+@app.cell
+def _(count_df, gt_counts, pl):
+    count_errors = (
+        count_df.rename({"count": "measured"})
+        #.filter(pl.col('order') == pl.col('order').max().over('uid'))
+        .select(["uid", "scene", "measured"])
+        .join(gt_counts, on="scene", how="left")
+        .with_columns(error=abs(pl.col("count") - pl.col("measured")))
+        .group_by('uid')
+        .agg(pl.col('error').mean())
+    )
+    print(count_errors)
+    return (count_errors,)
+
+
+@app.cell
+def _(count_errors, noticed_df, pl):
+    noticed_and_perf = (
+        noticed_df.join(count_errors, on="uid")
+        .group_by("noticed", "parent")
+        .agg(pl.mean("error"), pl.len())
+        .sort("noticed", "parent")
+    )
+    print(noticed_and_perf)
     return
 
 
