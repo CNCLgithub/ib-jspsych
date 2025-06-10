@@ -226,7 +226,8 @@ export async function run({
 
   cond_idx = await assignCondition(prolific_id, session_id, NCOND);
   console.log(`Assinged condition: ${cond_idx}`);
-  const condition = CONDITIONS[cond_idx];
+  // cond_idx starts at 1
+  const condition = CONDITIONS[cond_idx-1];
   const timeline = [];
   const DATASETRAW = await fetch("assets/dataset.bin", { method: "GET" });
   const DATASETBUFFER = await DATASETRAW.arrayBuffer();

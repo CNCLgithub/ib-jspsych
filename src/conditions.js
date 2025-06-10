@@ -153,7 +153,7 @@ export async function assignCondition(prolific_pid, session_id, ncond) {
     console.error("Failed to generate assignment:\n ",
       error,
       "\n Falling back to random assignment.");
-    return Math.floor(Math.random() * ncond);
+    return Math.ceil(Math.random() * ncond);
   });
   return assignment;
 }
