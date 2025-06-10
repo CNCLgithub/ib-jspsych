@@ -1,7 +1,7 @@
 /**
  * @title Event counting
  * @description Count the number of times objects bounce
- * @version 2025-06-09_W96KtK
+ * @version 2025-06-09_W96KtK0-swapped
  *
  * @assets assets/
  */
@@ -34,7 +34,7 @@ import {
   GLOBAL VARIABLES
 */
 // EXPERIMENT VARIABLES!!
-const SWAP_APPEARANCE = false; // for control experiment
+const SWAP_APPEARANCE = true; // for control experiment
 const NTRIALS = 5;
 // Fallback URL; Normally set under JATOS -> Redirect URL
 const PROLIFIC_URL = "https:app.prolific.com/submissions/complete?cc=C1EB8IGX";
