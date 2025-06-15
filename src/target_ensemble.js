@@ -1,7 +1,7 @@
 /**
  * @title Event counting
  * @description Count the number of times objects bounce
- * @version 2025-06-09_W96KtK0-swapped
+ * @version 2025-06-09_W96KtK0-v2-swapped
  *
  * @assets assets/
  */

@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.13.8"
+__generated_with = "0.13.15"
 app = marimo.App(width="medium")
 
 
@@ -12,27 +12,38 @@ def _():
 
 @app.cell
 def _():
+    import json
     import numpy as np
     import polars as pl
     import altair as alt
 
     alt.theme.enable("carbong100")
-    return (pl,)
+    return json, np, pl
 
 
 @app.cell
 def versioning():
     exp = "target-ensemble"
-    version = "pilot-v1"
+    # version = "pilot-v1"
+    version = "2025-06-09_W96KtK-v2-swapped-batch2"
     return exp, version
 
 
 @app.cell
-def _(exp, pl):
+def _(exp, json, np, pl, version):
     col_count_schema = {"scene": pl.UInt8, "count": pl.Int64}
-    gt_counts = pl.read_csv(
-        f"data/{exp}_collision_counts.csv", schema=col_count_schema
+    # repair version name for manifest; is the same for main and swapped experiments
+    _version = version.replace("-swapped", "").replace('-batch2', '')
+    with open(f"data/{exp}-{_version}-manifest.json", "r") as file:
+        manifest = json.load(file)
+
+    gt_counts_raw = manifest["counts"]
+    nscenes = len(gt_counts_raw)
+    gt_counts = pl.DataFrame(
+        {"scene": np.arange(nscenes) + 1, "count": gt_counts_raw},
+        schema=col_count_schema,
     )
+    gt_counts
     return (gt_counts,)
 
 
@@ -70,10 +81,9 @@ def counts(exp, pl, version):
         "rt": pl.Float32,
         "order": pl.UInt8,
     }
-    count_df = (
-        pl.read_csv(f"data/{exp}-{version}_counts.csv", schema=count_schema)
-        .with_columns(order = pl.col('order').rank().over('uid'))
-    )
+    count_df = pl.read_csv(
+        f"data/{exp}-{version}_counts.csv", schema=count_schema
+    ).with_columns(order=pl.col("order").rank().over("uid"))
     print(count_df)
     return (count_df,)
 
@@ -88,12 +98,12 @@ def _(noticed_df):
 def _(count_df, gt_counts, pl):
     count_errors = (
         count_df.rename({"count": "measured"})
-        #.filter(pl.col('order') == pl.col('order').max().over('uid'))
+        .filter(pl.col("order") < pl.col("order").max().over("uid"))
         .select(["uid", "scene", "measured"])
         .join(gt_counts, on="scene", how="left")
         .with_columns(error=abs(pl.col("count") - pl.col("measured")))
-        .group_by('uid')
-        .agg(pl.col('error').mean())
+        .group_by("uid")
+        .agg(pl.col("error").mean())
     )
     print(count_errors)
     return (count_errors,)
