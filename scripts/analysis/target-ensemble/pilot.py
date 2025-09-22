@@ -25,7 +25,7 @@ def _():
 def versioning():
     exp = "target-ensemble"
     # version = "pilot-v1"
-    version = "2025-06-09_W96KtK-v2-swapped-batch2"
+    version = "2025-06-09_W96KtK-v2-all-swapped"
     return exp, version
 
 
@@ -33,7 +33,9 @@ def versioning():
 def _(exp, json, np, pl, version):
     col_count_schema = {"scene": pl.UInt8, "count": pl.Int64}
     # repair version name for manifest; is the same for main and swapped experiments
-    _version = version.replace("-swapped", "").replace('-batch2', '')
+    _version = (
+        version.replace("-swapped", "").replace("-batch2", "").replace("-all", "")
+    )
     with open(f"data/{exp}-{_version}-manifest.json", "r") as file:
         manifest = json.load(file)
 
@@ -139,6 +141,8 @@ def _(noticed_df, pl):
         .agg(pl.mean("noticed"), pl.len())
         .sort("scene", "parent")
     )
+    with pl.Config(tbl_rows=50):
+        print(noticed_by_scene)
     return (noticed_by_scene,)
 
 
