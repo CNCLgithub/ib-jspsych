@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.16.3"
+__generated_with = "0.18.2"
 app = marimo.App(width="medium")
 
 
@@ -12,13 +12,17 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""# Setup""")
+    mo.md(r"""
+    # Setup
+    """)
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Dependencies""")
+    mo.md(r"""
+    ## Dependencies
+    """)
     return
 
 
@@ -52,7 +56,9 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Type Definitions""")
+    mo.md(r"""
+    ## Type Definitions
+    """)
     return
 
 
@@ -61,13 +67,15 @@ def _(pl):
     # Polars dataseries types
     Parent = pl.Enum(["Grouped", "Alone"])
     Color = pl.Enum(["Light", "Dark"])
-    Model = pl.Enum(["Human", "MO", "Just Attention", "Fixed Resource"])
+    Model = pl.Enum(["Human", "mo", "ja", "ta", "fr"])
     return Color, Model, Parent
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Trial design""")
+    mo.md(r"""
+    ## Trial design
+    """)
     return
 
 
@@ -80,7 +88,9 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""#### Ground truth counts""")
+    mo.md(r"""
+    #### Ground truth counts
+    """)
     return
 
 
@@ -93,7 +103,6 @@ def _(exp, json, np, pl, version):
         .replace("-batch2", "")
         .replace("-all", "")
         .replace("-replication", "")
-        .replace("-v2", "")
         .replace("-preregistered", "")
     )
     with open(f"data/{exp}-{base_version}-manifest.json", "r") as file:
@@ -126,25 +135,27 @@ def _(Parent, nscenes, pl):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""#### Human data""")
+    mo.md(r"""
+    #### Human data
+    """)
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Exclusion Criteria""")
+    mo.md(r"""
+    ## Exclusion Criteria
+    """)
     return
 
 
 @app.cell(hide_code=True)
 def _(ctrl_ex_rate, main_ex_rate, mo, np):
-    mo.md(
-        f"""
+    mo.md(f"""
     Exclusion Rate for Unswapped = {np.round(main_ex_rate * 100, decimals=1)}%
 
     Exclusion Rate for Swapped = {np.round(ctrl_ex_rate * 100, decimals=1)}%
-    """
-    )
+    """)
     return
 
 
@@ -287,7 +298,9 @@ def _(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Loading human data""")
+    mo.md(r"""
+    ## Loading human data
+    """)
     return
 
 
@@ -316,13 +329,17 @@ def dataload(Color, exp, load_behavior, pl, version):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""# Part 1: Human Analyses""")
+    mo.md(r"""
+    # Part 1: Human Analyses
+    """)
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Summary statistics""")
+    mo.md(r"""
+    ## Summary statistics
+    """)
     return
 
 
@@ -348,7 +365,9 @@ def _(human_notice_summary, mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Chi-Squared""")
+    mo.md(r"""
+    ## Chi-Squared
+    """)
     return
 
 
@@ -387,22 +406,25 @@ def _(chi_squared_human_light, mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""# Part 2: Model analyses""")
+    mo.md(r"""
+    # Part 2: Model analyses
+    """)
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Loading model runs""")
+    mo.md(r"""
+    ## Loading model runs
+    """)
     return
 
 
 @app.cell
 def _(Color, Model, Parent, pl):
-    def load_model(name: str):
-        pathname = name.replace(" ", "_").lower()
+    def load_models(path: str):
         df = (
-            pl.read_csv(f"data/{pathname}.csv")
+            pl.read_csv(path)
             .with_columns(
                 color=pl.when(pl.col("color") == "light")
                 .then(pl.lit("Light"))
@@ -420,21 +442,19 @@ def _(Color, Model, Parent, pl):
                     "covariate": pl.Float64,
                 }
             )
-            .with_columns(model=pl.lit(name).cast(Model))
+            .with_columns(model=pl.col("model").cast(Model))
         )
         return df
 
-
-    mo_model = load_model("MO")
-    ac_model = load_model("Just Attention")
-    fr_model = load_model("Fixed Resource")
-    all_models = pl.concat([mo_model, ac_model, fr_model], how="vertical")
-    return ac_model, all_models, fr_model, mo_model
+    all_models = load_models("data/study2_models.csv")
+    return (all_models,)
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Chi-Squared""")
+    mo.md(r"""
+    ## Chi-Squared
+    """)
     return
 
 
@@ -530,7 +550,9 @@ def _(chi_squared_mo_unswapped, mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""### Noticing rates by design""")
+    mo.md(r"""
+    ### Noticing rates by design
+    """)
     return
 
 
@@ -569,7 +591,9 @@ def _(alt, mo, notice_by_design):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""## Modelling trial-level noticing""")
+    mo.md(r"""
+    ## Modelling trial-level noticing
+    """)
     return
 
 
@@ -581,34 +605,26 @@ def _(linregress, pl):
     def fit_model(data: pl.Struct):
         x = data.struct.field("covariate")
         y = data.struct.field("noticed")
-        result = linregress(x, y)
-        return {
-            "r^2": result.rvalue**2,
-            "p_value": result.pvalue,
-        }
+        try:
+            result = linregress(x, y)
+            return {
+                "r^2": result.rvalue**2,
+                "p_value": result.pvalue,
+            }
+        except:
+            return {"r^2" : float("nan"),
+                    "p_value" : float("nan")}
     return CorResult, fit_model
 
 
 @app.cell
-def _(
-    CorResult,
-    Model,
-    ac_model,
-    ctrl_noticed,
-    fit_model,
-    fr_model,
-    main_noticed,
-    mo_model,
-    pl,
-):
+def _(CorResult, Model, all_models, ctrl_noticed, fit_model, main_noticed, pl):
     def fit_models_to_human(
         unswapped_df: pl.DataFrame, swapped_df: pl.DataFrame, models
     ):
-        n = len(models)
         results = []
 
-        for i, name in enumerate(models):
-            model = models[name]
+        for name, model in models:
             model_vs_noticing = (
                 pl.concat([unswapped_df, swapped_df])
                 .group_by("color", "scene", "parent")
@@ -625,29 +641,26 @@ def _(
                     )
                 )
                 .unnest("regression")
-                .with_columns(model=pl.lit(name).cast(Model))
             )
+            fit = fit.with_columns(model = pl.lit(name[0]))
             results.append(fit)
 
         results = pl.concat(results, how="vertical").select(
             ["model", "r^2", "p_value"]
-        )
+        ).with_columns(model = pl.col("model").cast(Model)).sort("model")
         return results
 
 
-    models = {
-        "MO": mo_model,
-        "Just Attention": ac_model,
-        "Fixed Resource": fr_model,
-    }
-    model_names = list(models.keys())
-    print(fit_models_to_human(main_noticed, ctrl_noticed, models))
-    return fit_models_to_human, model_names, models
+    models_grouped = all_models.group_by("model") 
+    print(fit_models_to_human(main_noticed, ctrl_noticed, models_grouped))
+    return (fit_models_to_human,)
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""### Boostrapped analyses""")
+    mo.md(r"""
+    ### Boostrapped analyses
+    """)
     return
 
 
@@ -718,15 +731,13 @@ def _(fit_samples, np):
 
 @app.cell(hide_code=True)
 def _(fr_cis, ja_cis, mo, mo_cis):
-    mo.md(
-        rf"""
+    mo.md(rf"""
     MO 95% CIs = {mo_cis}
 
     JA 95% CIs = {ja_cis}
 
     FR 95% CIs = {fr_cis}
-    """
-    )
+    """)
     return
 
 
@@ -758,8 +769,7 @@ def _(fit_samples, np, pl):
 
 @app.cell(hide_code=True)
 def _(mo, mo_vs_fr_CIs, mo_vs_fr_pval, mo_vs_ja_CIs, mo_vs_ja_pval):
-    mo.md(
-        rf"""
+    mo.md(rf"""
     MO > Just Attention: p-value = {mo_vs_ja_pval}
 
     MO > Just Attention: 95% CIs = {mo_vs_ja_CIs}
@@ -767,8 +777,7 @@ def _(mo, mo_vs_fr_CIs, mo_vs_fr_pval, mo_vs_ja_CIs, mo_vs_ja_pval):
     MO > Fixed Resource: p-value = {mo_vs_fr_pval}
 
     MO > Fixed Resource: 95% CIs = {mo_vs_fr_CIs}
-    """
-    )
+    """)
     return
 
 
@@ -831,13 +840,11 @@ def _(alt, pl, samples):
 
 @app.cell
 def _(cis, mo, pval):
-    mo.md(
-        f"""
+    mo.md(f"""
     p-value = {pval}
 
     95 % CIs = {cis}
-    """
-    )
+    """)
     return
 
 
@@ -881,7 +888,9 @@ def _(ctrl_agg_result, main_agg_result, pl):
 
 
 @app.cell
-def _(alt, ctrl_noticed, main_noticed, mo, mo_model, pl):
+def _(all_models, alt, ctrl_noticed, main_noticed, mo, pl):
+    mo_model = all_models.filter(pl.col("model") == "mo")
+
     model_vs_noticing = (
         pl.concat([main_noticed, ctrl_noticed])
         .group_by("color", "scene", "parent")
@@ -936,7 +945,9 @@ def _(CorResult, fit_model, model_vs_noticing, pl):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""# Counting performance""")
+    mo.md(r"""
+    # Counting performance
+    """)
     return
 
 
@@ -951,8 +962,9 @@ def _(all_models, pl):
     model_perf_summary = (
         all_models
         .group_by("model")
-        .agg(pl.col('error_mean').mean().alias('error_mu'),
-            pl.col("error_mean").std().alias("error_sd"))
+        .agg(pl.col('count_error_mean').mean().alias('error_mu'),
+            pl.col("count_error_mean").std().alias("error_sd"))
+        .sort("model")
     )
     return (model_perf_summary,)
 
@@ -965,9 +977,9 @@ def _(mo, model_perf_summary):
 
 @app.cell
 def _(all_models, pl, ttest_ind):
-    _perf_mo = all_models.filter(pl.col('model') == "MO")
-    _perf_ac = all_models.filter(pl.col('model') == "Just Attention")
-    perf_mo_vs_ac = ttest_ind(_perf_mo["error_mean"], _perf_ac["error_mean"])
+    _perf_mo = all_models.filter(pl.col('model') == "mo")
+    _perf_ac = all_models.filter(pl.col('model') == "ja")
+    perf_mo_vs_ac = ttest_ind(_perf_mo["count_error_mean"], _perf_ac["count_error_mean"])
     print(perf_mo_vs_ac)
     return
 
