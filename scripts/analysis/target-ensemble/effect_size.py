@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.2"
+__generated_with = "0.19.6"
 app = marimo.App(width="medium")
 
 
@@ -65,8 +65,8 @@ def _(mo):
 @app.cell
 def _(pl):
     # Polars dataseries types
-    Parent = pl.Enum(["Grouped", "Alone"])
-    Color = pl.Enum(["Light", "Dark"])
+    Parent = pl.Enum(["grouped", "lone"])
+    Color = pl.Enum(["light", "dark"])
     Model = pl.Enum(["Human", "mo", "ja", "ta", "fr"])
     return Color, Model, Parent
 
@@ -108,6 +108,7 @@ def _(exp, json, np, pl, version):
     with open(f"data/{exp}-{base_version}-manifest.json", "r") as file:
         manifest = json.load(file)
 
+    # gt_counts_raw = [3, 3, 4, 4, 5, 3]  # manifest["counts"]
     gt_counts_raw = manifest["counts"]
     nscenes = len(gt_counts_raw)
 
@@ -124,7 +125,7 @@ def _(Parent, nscenes, pl):
     trial_design = pl.DataFrame(
         [
             [scene + 1, par]
-            for par in ["Grouped", "Alone"]
+            for par in ["grouped", "lone"]
             for scene in range(nscenes)
         ],
         schema={"scene": pl.UInt8, "parent": Parent},
@@ -284,8 +285,8 @@ def _(
         # Add factor and design columns
         noticed_df = noticed_df.with_columns(
             parent=pl.when(pl.col("grouped"))
-            .then(pl.lit("Grouped"))
-            .otherwise(pl.lit("Alone"))
+            .then(pl.lit("grouped"))
+            .otherwise(pl.lit("lone"))
             .cast(Parent)
         ).select(pl.all().exclude("grouped"))
         noticed_df = trial_design.join(
@@ -307,13 +308,13 @@ def _(mo):
 @app.cell
 def dataload(Color, exp, load_behavior, pl, version):
     main_noticed, main_ex_rate, main_perf = load_behavior(f"data/{exp}-{version}")
-    main_noticed = main_noticed.with_columns(color=pl.lit("Light").cast(Color))
-    main_perf = main_perf.with_columns(color=pl.lit("Light").cast(Color))
+    main_noticed = main_noticed.with_columns(color=pl.lit("light").cast(Color))
+    main_perf = main_perf.with_columns(color=pl.lit("light").cast(Color))
     ctrl_noticed, ctrl_ex_rate, ctrl_perf = load_behavior(
         f"data/{exp}-{version}-swapped"
     )
-    ctrl_noticed = ctrl_noticed.with_columns(color=pl.lit("Dark").cast(Color))
-    ctrl_perf = ctrl_perf.with_columns(color=pl.lit("Dark").cast(Color))
+    ctrl_noticed = ctrl_noticed.with_columns(color=pl.lit("dark").cast(Color))
+    ctrl_perf = ctrl_perf.with_columns(color=pl.lit("dark").cast(Color))
 
     all_noticed = pl.concat([main_noticed, ctrl_noticed]).cast({"scene": pl.UInt8})
     all_perf = pl.concat([main_perf, ctrl_perf])
@@ -404,6 +405,20 @@ def _(chi_squared_human_light, mo):
     return
 
 
+@app.cell
+def _(all_noticed, mo, pl):
+    mo.ui.table(
+        all_noticed.group_by("scene", "color", "parent")
+        .agg(
+            yes=pl.col("noticed").sum(),
+            no=pl.col("noticed").not_().sum(),
+            pct=pl.col("noticed").mean().round_sig_figs(digits=2),
+        )
+        .sort("color", "parent")
+    )
+    return
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -421,32 +436,35 @@ def _(mo):
 
 
 @app.cell
-def _(Color, Model, Parent, pl):
+def _(Color, Model, Parent, gt_counts, pl):
     def load_models(path: str):
         df = (
-            pl.read_csv(path)
-            .with_columns(
-                color=pl.when(pl.col("color") == "light")
-                .then(pl.lit("Light"))
-                .otherwise(pl.lit("Dark")),
-                parent=pl.when(pl.col("parent") == "lone")
-                .then(pl.lit("Alone"))
-                .otherwise(pl.lit("Grouped")),
-            )
-            .rename({"noticed": "covariate"})
-            .cast(
-                {
+            pl.read_csv(
+                path,
+                schema={
                     "scene": pl.UInt8,
                     "color": Color,
                     "parent": Parent,
-                    "covariate": pl.Float64,
-                }
+                    "chain": pl.Int64,
+                    "ndetected": pl.Int64,
+                    "expected_count": pl.Float64,
+                    "count_error": pl.Float64,
+                    "time": pl.Float64,
+                    "model": Model,
+                },
             )
-            .with_columns(model=pl.col("model").cast(Model))
+            .join(gt_counts, on="scene")
+            .with_columns(
+                count_error=(pl.col("expected_count") - pl.col("count")).abs()
+                / pl.col("count"),
+                error_time=pl.col("count_error") * pl.col("time"),
+                noticed=pl.col("ndetected") > 24,
+            )
         )
         return df
 
-    all_models = load_models("data/study2_models.csv")
+
+    all_models = load_models("data/study2/aggregate.csv")
     return (all_models,)
 
 
@@ -461,17 +479,11 @@ def _(mo):
 @app.cell
 def _(all_models, pl):
     model_summary = (
-        all_models.with_columns(
-            yes=pl.col("covariate") * pl.lit(60)  # 60 runs per trial
-        )
-        .with_columns(
-            no=pl.lit(60) - pl.col("yes"),
-        )
-        .group_by("model", "color", "parent")
+        all_models.group_by("model", "color", "parent")
         .agg(
-            yes=pl.col("yes").sum(),
-            no=pl.col("no").sum(),
-            pct=pl.col("covariate").mean().round_sig_figs(digits=2),
+            yes=pl.col("noticed").sum(),
+            no=pl.col("noticed").not_().sum(),
+            pct=pl.col("noticed").mean().round_sig_figs(digits=2),
         )
         .sort("model", "color", "parent")
     )
@@ -612,8 +624,7 @@ def _(linregress, pl):
                 "p_value": result.pvalue,
             }
         except:
-            return {"r^2" : float("nan"),
-                    "p_value" : float("nan")}
+            return {"r^2": float("nan"), "p_value": float("nan")}
     return CorResult, fit_model
 
 
@@ -634,26 +645,32 @@ def _(CorResult, Model, all_models, ctrl_noticed, fit_model, main_noticed, pl):
                 .with_columns(pl.col("noticed").fill_null(strategy="zero"))
             )
 
-            fit = (
-                model_vs_noticing.select(
-                    regression=pl.struct("covariate", "noticed").map_batches(
-                        fit_model, return_dtype=CorResult
-                    )
+            fit = model_vs_noticing.select(
+                regression=pl.struct("covariate", "noticed").map_batches(
+                    fit_model, return_dtype=CorResult
                 )
-                .unnest("regression")
-            )
-            fit = fit.with_columns(model = pl.lit(name[0]))
+            ).unnest("regression")
+            fit = fit.with_columns(model=pl.lit(name[0]))
             results.append(fit)
 
-        results = pl.concat(results, how="vertical").select(
-            ["model", "r^2", "p_value"]
-        ).with_columns(model = pl.col("model").cast(Model)).sort("model")
+        results = (
+            pl.concat(results, how="vertical")
+            .select(["model", "r^2", "p_value"])
+            .with_columns(model=pl.col("model").cast(Model))
+            .sort("model")
+        )
         return results
 
 
-    models_grouped = all_models.group_by("model") 
-    print(fit_models_to_human(main_noticed, ctrl_noticed, models_grouped))
-    return (fit_models_to_human,)
+    models_trial_lvl = all_models.group_by("model", "color", "parent", "scene").agg(
+        covariate=pl.col("noticed").mean()
+    )
+
+    models_grouped = models_trial_lvl.group_by("model")
+    model_fits = fit_models_to_human(main_noticed, ctrl_noticed, models_grouped)
+    model_names = model_fits["model"].to_numpy()
+    print(model_fits)
+    return fit_models_to_human, model_names, models_grouped, models_trial_lvl
 
 
 @app.cell(hide_code=True)
@@ -685,7 +702,7 @@ def _(
     fit_models_to_human,
     main_noticed,
     model_names,
-    models,
+    models_grouped,
     np,
     ordinary_by_subj,
     pl,
@@ -694,16 +711,16 @@ def _(
         steps: int = 10000,
         rng: Callable = ordinary_by_subj,
     ):
-        n = len(models)
+        n = models_grouped.len().height
         samples = np.zeros((steps, n))
         for i in range(steps):
             fit_df = fit_models_to_human(
-                rng(main_noticed), rng(ctrl_noticed), models
+                rng(main_noticed), rng(ctrl_noticed), models_grouped
             )
             samples[i] = fit_df["r^2"].to_numpy()
 
         _boot_dict = {
-            model: samples[:, i] for (i, model) in enumerate(model_names)
+            str(model): samples[:, i] for (i, model) in enumerate(model_names)
         }
         _boot_dict["sample"] = range(steps)
         boot_df = pl.DataFrame(_boot_dict)
@@ -719,22 +736,21 @@ def _(bootstrap_model_fits):
 
 @app.cell
 def _(fit_samples, np):
-    mo_cis = np.percentile(fit_samples.select("MO").to_numpy(), [2.5, 97.5])
-    ja_cis = np.percentile(
-        fit_samples.select("Just Attention").to_numpy(), [2.5, 97.5]
-    )
-    fr_cis = np.percentile(
-        fit_samples.select("Fixed Resource").to_numpy(), [2.5, 97.5]
-    )
-    return fr_cis, ja_cis, mo_cis
+    mo_cis = np.percentile(fit_samples.select("mo").to_numpy(), [2.5, 97.5])
+    ja_cis = np.percentile(fit_samples.select("ja").to_numpy(), [2.5, 97.5])
+    fr_cis = np.percentile(fit_samples.select("fr").to_numpy(), [2.5, 97.5])
+    ta_cis = np.percentile(fit_samples.select("ta").to_numpy(), [2.5, 97.5])
+    return fr_cis, ja_cis, mo_cis, ta_cis
 
 
 @app.cell(hide_code=True)
-def _(fr_cis, ja_cis, mo, mo_cis):
+def _(fr_cis, ja_cis, mo, mo_cis, ta_cis):
     mo.md(rf"""
     MO 95% CIs = {mo_cis}
 
     JA 95% CIs = {ja_cis}
+
+    TA 95% CIs = {ta_cis}
 
     FR 95% CIs = {fr_cis}
     """)
@@ -743,17 +759,19 @@ def _(fr_cis, ja_cis, mo, mo_cis):
 
 @app.cell
 def _(fit_samples, np, pl):
-    mo_vs_ja_diff = fit_samples.select(
-        diff=pl.col("MO") - pl.col("Just Attention")
-    )
+    mo_vs_ja_diff = fit_samples.select(diff=pl.col("mo") - pl.col("ja"))
 
     mo_vs_ja_CIs = np.percentile(mo_vs_ja_diff["diff"].to_numpy(), [2.5, 97.5])
 
     mo_vs_ja_pval = mo_vs_ja_diff.select(pl.col("diff") < 0).mean().item()
 
-    mo_vs_fr_diff = fit_samples.select(
-        diff=pl.col("MO") - pl.col("Fixed Resource")
-    )
+    mo_vs_ta_diff = fit_samples.select(diff=pl.col("mo") - pl.col("ta"))
+
+    mo_vs_ta_CIs = np.percentile(mo_vs_ta_diff["diff"].to_numpy(), [2.5, 97.5])
+
+    mo_vs_ta_pval = mo_vs_ta_diff.select(pl.col("diff") < 0).mean().item()
+
+    mo_vs_fr_diff = fit_samples.select(diff=pl.col("mo") - pl.col("fr"))
 
     mo_vs_fr_CIs = np.percentile(mo_vs_fr_diff["diff"].to_numpy(), [2.5, 97.5])
 
@@ -764,15 +782,29 @@ def _(fit_samples, np, pl):
         mo_vs_ja_CIs,
         mo_vs_ja_diff,
         mo_vs_ja_pval,
+        mo_vs_ta_CIs,
+        mo_vs_ta_pval,
     )
 
 
 @app.cell(hide_code=True)
-def _(mo, mo_vs_fr_CIs, mo_vs_fr_pval, mo_vs_ja_CIs, mo_vs_ja_pval):
+def _(
+    mo,
+    mo_vs_fr_CIs,
+    mo_vs_fr_pval,
+    mo_vs_ja_CIs,
+    mo_vs_ja_pval,
+    mo_vs_ta_CIs,
+    mo_vs_ta_pval,
+):
     mo.md(rf"""
     MO > Just Attention: p-value = {mo_vs_ja_pval}
 
     MO > Just Attention: 95% CIs = {mo_vs_ja_CIs}
+
+    MO > Task Agnostic: p-value = {mo_vs_ta_pval}
+
+    MO > Task Agnostic: 95% CIs = {mo_vs_ta_CIs}
 
     MO > Fixed Resource: p-value = {mo_vs_fr_pval}
 
@@ -782,12 +814,19 @@ def _(mo, mo_vs_fr_CIs, mo_vs_fr_pval, mo_vs_ja_CIs, mo_vs_ja_pval):
 
 
 @app.cell
+def _(fit_samples, mo):
+    mo.ui.table(fit_samples)
+    return
+
+
+@app.cell
 def _(Model, alt, fit_samples, model_names):
     _df = fit_samples.unpivot(
         model_names, index="sample", variable_name="model", value_name="r^2"
     ).cast({"model": Model})
+
     alt.Chart(_df).mark_bar().encode(
-        alt.X("r^2:Q").bin(maxbins=50).title("Explained Variance"),
+        alt.X("r^2:Q").bin(step=0.025).title("Explained Variance"),
         alt.Row("model:N"),
         y="count()",
     )
@@ -830,9 +869,7 @@ def _(np, samples):
 def _(alt, pl, samples):
     _df = pl.DataFrame({"samples": samples})
     alt.Chart(_df).mark_bar().encode(
-        alt.X("samples:Q")
-        .bin(maxbins=50)
-        .title("Difference: Unswapped - Swapped"),
+        alt.X("samples:Q").bin(step=0.025).title("Difference: Unswapped - Swapped"),
         y="count()",
     ).properties(title="Main Exp - Ctrl Exp")
     return
@@ -854,7 +891,7 @@ def _(Color, main_noticed, pl):
         main_noticed.group_by("parent")
         .agg(pl.col("noticed").mean(), pl.len())
         .sort("parent")
-        .with_columns(color=pl.lit("Light").cast(Color))
+        .with_columns(color=pl.lit("light").cast(Color))
     )
     return (main_agg_result,)
 
@@ -865,7 +902,7 @@ def _(Color, ctrl_noticed, pl):
         ctrl_noticed.group_by("parent")
         .agg(pl.col("noticed").mean(), pl.len())
         .sort("parent")
-        .with_columns(color=pl.lit("Dark").cast(Color))
+        .with_columns(color=pl.lit("dark").cast(Color))
     )
     return (ctrl_agg_result,)
 
@@ -888,8 +925,8 @@ def _(ctrl_agg_result, main_agg_result, pl):
 
 
 @app.cell
-def _(all_models, alt, ctrl_noticed, main_noticed, mo, pl):
-    mo_model = all_models.filter(pl.col("model") == "mo")
+def _(alt, ctrl_noticed, main_noticed, mo, models_trial_lvl, pl):
+    mo_model = models_trial_lvl.filter(pl.col("model") == "mo")
 
     model_vs_noticing = (
         pl.concat([main_noticed, ctrl_noticed])
@@ -901,25 +938,31 @@ def _(all_models, alt, ctrl_noticed, main_noticed, mo, pl):
     )
 
     _base = alt.Chart(model_vs_noticing).encode(
-        alt.X("covariate:Q").title("Model % Noticed").scale(zero=False),
-        alt.Y("noticed:Q").title("Human % Noticed").scale(padding=0.25),
+        alt.X("covariate:Q").title("Model % Noticed").scale(padding=0.01),
+        alt.Y("noticed:Q").title("Human % Noticed").scale(padding=0.01),
         alt.Shape("parent:N"),
         alt.Color("color:N"),
-        alt.Text("scene:N"),
+        # alt.Text("scene:N"),
     )
 
     _points = _base.mark_point(size=200)
     _labels = _base.mark_text()
-
-    _chart = _points + _labels
-
-    _chart = _points + _points.transform_regression(
-        "covariate", "noticed", method="linear"
-    ).mark_line().transform_fold(["reg-line"], as_=["Regression", "y"]).encode(
-        alt.Color("Regression:N"), alt.Shape("Regression:N")
+    _chart = (
+        _points
+        + _points.transform_regression("covariate", "noticed", method="linear")
+        .mark_line()
+        .transform_fold(["reg-line"], as_=["Regression", "y"])
+        .encode(alt.Color("Regression:N"), alt.Shape("Regression:N"))
+        + _labels
     )
     mo.ui.altair_chart(_chart)
     return (model_vs_noticing,)
+
+
+@app.cell
+def _(mo, model_vs_noticing):
+    mo.ui.table(model_vs_noticing)
+    return
 
 
 @app.cell
@@ -952,6 +995,21 @@ def _(mo):
 
 
 @app.cell
+def _(all_models, pl):
+    print(
+        all_models.group_by("model")
+        .agg(
+            pl.col("count_error").mean().alias("error_mu"),
+            pl.col("count_error").std().alias("error_std"),
+            pl.col("time").mean().alias("time_mu"),
+            pl.col("time").std().alias("time_std"),
+        )
+        .sort("model")
+    )
+    return
+
+
+@app.cell
 def _(all_models, mo):
     mo.ui.table(all_models)
     return
@@ -960,13 +1018,21 @@ def _(all_models, mo):
 @app.cell
 def _(all_models, pl):
     model_perf_summary = (
-        all_models
-        .group_by("model")
-        .agg(pl.col('count_error_mean').mean().alias('error_mu'),
-            pl.col("count_error_mean").std().alias("error_sd"))
+        all_models.group_by("model", "scene", "color", "parent")
+        .agg(
+            pl.col("expected_count").mean(),
+            pl.col("count_error").mean().alias("error_mu"),
+            pl.col("count_error").std().alias("error_sd"),
+        )
         .sort("model")
     )
     return (model_perf_summary,)
+
+
+@app.cell
+def _(gt_counts):
+    gt_counts
+    return
 
 
 @app.cell
@@ -977,19 +1043,27 @@ def _(mo, model_perf_summary):
 
 @app.cell
 def _(all_models, pl, ttest_ind):
-    _perf_mo = all_models.filter(pl.col('model') == "mo")
-    _perf_ac = all_models.filter(pl.col('model') == "ja")
-    perf_mo_vs_ac = ttest_ind(_perf_mo["count_error_mean"], _perf_ac["count_error_mean"])
-    print(perf_mo_vs_ac)
+    _perf_mo = all_models.filter(pl.col("model") == "mo")
+    _perf_ac = all_models.filter(pl.col("model") == "ja")
+    print(ttest_ind(_perf_mo["count_error"], _perf_ac["count_error"]))
+    print(ttest_ind(_perf_mo["time"], _perf_ac["time"]))
     return
 
 
 @app.cell
 def _(all_models, pl, ttest_ind):
-    _perf_mo = all_models.filter(pl.col('model') == "MO")
-    _perf_fr = all_models.filter(pl.col('model') == "Fixed Resource")
-    perf_mo_vs_fr = ttest_ind(_perf_mo["error_mean"], _perf_fr["error_mean"])
+    _perf_mo = all_models.filter(pl.col("model") == "mo")
+    _perf_fr = all_models.filter(pl.col("model") == "fr")
+    perf_mo_vs_fr = ttest_ind(_perf_mo["count_error"], _perf_fr["count_error"])
     print(perf_mo_vs_fr)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # MISC
+    """)
     return
 
 
@@ -1051,8 +1125,87 @@ def _(alt, main_noticed):
 
 
 @app.cell
+def _(count_schema, exp, gt_counts, pl, version):
+    count_df_raw = (
+        pl.read_csv(f"data/{exp}-{version}" + "_counts.csv", schema=count_schema)
+        .rename({"count": "measured"})
+        .select(["uid", "scene", "measured"])
+        .join(gt_counts, on="scene", how="left")
+        .with_columns(
+            error=(pl.col("count") - pl.col("measured")) / pl.col("count")
+        )
+        .group_by("uid")
+        .agg(pl.col("error").mean())
+    )
+    return (count_df_raw,)
+
+
+@app.cell
+def _(count_df_raw, mo):
+    mo.ui.table(count_df_raw)
+    return
+
+
+@app.cell
+def _(count_df_raw):
+    count_df_raw["error"].abs().mean()
+    return
+
+
+@app.cell
+def _(count_schema, exp, gt_counts, mo, pl, version):
+    mo.ui.table(
+        pl.read_csv(f"data/{exp}-{version}" + "_counts.csv", schema=count_schema)
+        .rename({"count": "measured"})
+        .select(["uid", "scene", "measured"])
+        .join(gt_counts, on="scene", how="left")
+        .with_columns(
+            error=(pl.col("count") - pl.col("measured")) / pl.col("count")
+        )
+        .group_by("scene")
+        .agg(
+            pl.col("count").mean(),
+            pl.col("measured").mean(),
+            pl.col("error").mean(),
+        )
+    )
+    return
+
+
+@app.cell
+def _(alt, count_schema, exp, gt_counts, mo, pl, version):
+    _count = (
+        pl.read_csv(f"data/{exp}-{version}" + "_counts.csv", schema=count_schema)
+        .rename({"count": "measured"})
+        .select(["uid", "scene", "measured"])
+        .join(gt_counts, on="scene", how="left")
+    )
+    mo.ui.altair_chart(
+        alt.Chart(_count)
+        .mark_bar()
+        .encode(
+            alt.X("measured:Q")
+            .bin(maxbins=30)
+            .scale(domain=(1, 7))
+            .title("Counts"),
+            y="count()",
+            row="scene:O",
+        )
+        .properties(width=300, height=150)
+    )
+    return
+
+
+@app.cell
+def _(PARAMS, count_df_raw, pl):
+    count_df_raw.with_columns(error=pl.col("error").abs()).filter(
+        pl.col("error") < PARAMS.value["perf_thresh"]
+    ).describe()
+    return
+
+
+@app.cell
 def _(all_perf, alt):
-    print(all_perf)
     (
         alt.Chart(all_perf)
         .mark_bar()
@@ -1060,7 +1213,7 @@ def _(all_perf, alt):
             alt.X("error:Q").bin(maxbins=50).title("Subject average performance"),
             y="count()",
         )
-        .properties(title="Main Exp - Ctrl Exp")
+        .properties(title="Subject Performance")
     )
     return
 
