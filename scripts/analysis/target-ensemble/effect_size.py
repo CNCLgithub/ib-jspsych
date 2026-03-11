@@ -1,12 +1,13 @@
 import marimo
 
-__generated_with = "0.19.6"
+__generated_with = "0.20.4"
 app = marimo.App(width="medium")
 
 
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
@@ -193,6 +194,7 @@ def _():
 
     def clean_hit(desc: str):
         return any(substring in desc for substring in hit_list)
+
     return (clean_hit,)
 
 
@@ -209,6 +211,7 @@ def _(gt_counts, pl):
             .agg(pl.col("error").mean())
         )
         return count_errors
+
     return (calc_performance,)
 
 
@@ -226,6 +229,7 @@ def _(PARAMS, calc_performance, pl):
         # First 120 subjects
         passed = passed.head(n=120).join(notice, on="uid", how="left")
         return (passed, ex_rate, perf)
+
     return (exclude_subjects,)
 
 
@@ -261,7 +265,7 @@ def _(
     pl,
     trial_design,
 ):
-    def load_behavior(path: str):
+    def load_behavior(path: str, uid_offset=0):
         # Load bounce count data
         count_df = pl.read_csv(
             path + "_counts.csv", schema=count_schema
@@ -271,6 +275,10 @@ def _(
         noticed_raw = pl.read_csv(path + "_noticed.csv", schema=notice_schema)
         # Exclude subjects that count poorly
         noticed_df, ex_rate, perf = exclude_subjects(noticed_raw, count_df)
+        perf = perf.with_columns(
+            uid=pl.col("uid") + uid_offset
+        )  # keep uid's distinct
+
         # Optionally, filter out responses by description
         if PARAMS.value["screen_notice"]:
             noticed_df = noticed_df.with_columns(
@@ -289,11 +297,14 @@ def _(
             .otherwise(pl.lit("lone"))
             .cast(Parent)
         ).select(pl.all().exclude("grouped"))
-        noticed_df = trial_design.join(
-            noticed_df, on=["scene", "parent"], how="left"
-        ).fill_null(0.0)
+        noticed_df = (
+            trial_design.join(noticed_df, on=["scene", "parent"], how="left")
+            .fill_null(0.0)
+            .with_columns(uid=pl.col("uid") + uid_offset)  # keep uid's distinct
+        )
 
         return (noticed_df, ex_rate, perf)
+
     return (load_behavior,)
 
 
@@ -311,7 +322,8 @@ def dataload(Color, exp, load_behavior, pl, version):
     main_noticed = main_noticed.with_columns(color=pl.lit("light").cast(Color))
     main_perf = main_perf.with_columns(color=pl.lit("light").cast(Color))
     ctrl_noticed, ctrl_ex_rate, ctrl_perf = load_behavior(
-        f"data/{exp}-{version}-swapped"
+        f"data/{exp}-{version}-swapped",
+        uid_offset=1000,
     )
     ctrl_noticed = ctrl_noticed.with_columns(color=pl.lit("dark").cast(Color))
     ctrl_perf = ctrl_perf.with_columns(color=pl.lit("dark").cast(Color))
@@ -326,6 +338,12 @@ def dataload(Color, exp, load_behavior, pl, version):
         main_ex_rate,
         main_noticed,
     )
+
+
+@app.cell
+def _(all_noticed):
+    all_noticed.write_csv("./data/study2-human_noticing.csv")
+    return
 
 
 @app.cell(hide_code=True)
@@ -611,12 +629,10 @@ def _(mo):
 
 @app.cell
 def _(linregress, pl):
-    CorResult = pl.Struct({"r": pl.Float64, "p_value": pl.Float64})
+    CorResult = pl.Struct({"r^2": pl.Float64, "p_value": pl.Float64})
 
 
-    def fit_model(data: pl.Struct):
-        x = data.struct.field("covariate")
-        y = data.struct.field("noticed")
+    def safe_linear_fit(x, y):
         try:
             result = linregress(x, y)
             return {
@@ -625,7 +641,14 @@ def _(linregress, pl):
             }
         except:
             return {"r^2": float("nan"), "p_value": float("nan")}
-    return CorResult, fit_model
+
+
+    def fit_model(data: pl.Struct):
+        x = data.struct.field("covariate")
+        y = data.struct.field("noticed")
+        return safe_linear_fit(x, y)
+
+    return CorResult, fit_model, safe_linear_fit
 
 
 @app.cell
@@ -647,7 +670,9 @@ def _(CorResult, Model, all_models, ctrl_noticed, fit_model, main_noticed, pl):
 
             fit = model_vs_noticing.select(
                 regression=pl.struct("covariate", "noticed").map_batches(
-                    fit_model, return_dtype=CorResult
+                    fit_model,
+                    return_dtype=CorResult,
+                    returns_scalar=True,
                 )
             ).unnest("regression")
             fit = fit.with_columns(model=pl.lit(name[0]))
@@ -692,7 +717,148 @@ def _(pl):
             .explode(pl.all().exclude("uid"))
         )
         return sample
-    return (ordinary_by_subj,)
+
+
+    def split_by_subj(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
+        """
+        Randomly splits the dataframe into two roughly equally sized groups based on unique subjects (uid).
+
+        The split is done at the subject level (each uid goes entirely into one group or the other).
+        Returns a tuple (group_A, group_B).
+
+        Parameters
+        ----------
+        df : pl.DataFrame
+            Input dataframe containing at least a 'uid' column
+
+        Returns
+        -------
+        tuple[pl.DataFrame, pl.DataFrame]
+            (group_A, group_B) — two dataframes with disjoint sets of uids
+        """
+        # Get unique uids and shuffle them
+        unique_subjects = (
+            df.select("uid")
+            .unique()
+            .with_row_index()  # temporary index to help with splitting
+        )
+
+        n_subjects = unique_subjects.height
+        if n_subjects < 2:
+            raise ValueError(
+                "DataFrame must contain at least 2 unique subjects to split"
+            )
+
+        # Shuffle the subjects
+        shuffled = unique_subjects.sample(
+            n=n_subjects,
+            shuffle=True,
+        )
+
+        # Split into two roughly equal parts
+        mid = n_subjects // 2
+
+        groupA_uids = shuffled.head(mid).select("uid")
+        groupB_uids = shuffled.tail(n_subjects - mid).select("uid")
+
+        # Join back to original data
+        groupA = df.join(groupA_uids, on="uid", how="inner")
+        groupB = df.join(groupB_uids, on="uid", how="inner")
+
+        return groupA, groupB
+
+    return ordinary_by_subj, split_by_subj
+
+
+@app.cell
+def _(
+    Callable,
+    Color,
+    Parent,
+    all_noticed,
+    np,
+    nscenes,
+    pl,
+    safe_linear_fit,
+    split_by_subj,
+):
+    _trial_design = pl.DataFrame(
+        [
+            [scene + 1, col, par]
+            for par in ["grouped", "lone"]
+            for col in ["light", "dark"]
+            for scene in range(nscenes)
+        ],
+        schema={"scene": pl.UInt8, "color": Color, "parent": Parent},
+        orient="row",
+    )
+
+
+    def bootstrap_notice_rate(df: pl.DataFrame):
+        df = df.group_by("scene", "color", "parent").agg(pl.col("noticed").mean())
+        df = _trial_design.join(
+            df, on=["scene", "color", "parent"], how="left"
+        ).fill_null(0.0)
+        sample = df.sort("scene", "color", "parent")["noticed"].to_numpy()
+        return sample
+
+
+    def bootstrap_subject_split_half_step(rng: Callable = split_by_subj):
+        a, b = rng(all_noticed)
+        return (bootstrap_notice_rate(a), bootstrap_notice_rate(b))
+
+
+    def bootstrap_subject_split_half(
+        steps: int = 10000,
+    ):
+        samples = np.zeros(steps)
+        for i in range(steps):
+            a, b = bootstrap_subject_split_half_step()
+            samples[i] = safe_linear_fit(a, b)["r^2"]
+
+        return samples
+
+    return bootstrap_subject_split_half, bootstrap_subject_split_half_step
+
+
+@app.cell
+def _(bootstrap_subject_split_half_step, safe_linear_fit):
+    _a, _b = bootstrap_subject_split_half_step()
+    print(_a)
+    print(_b)
+    print(safe_linear_fit(_a, _b))
+    return
+
+
+@app.cell
+def _(bootstrap_subject_split_half):
+    split_half_samples = bootstrap_subject_split_half(10000)
+    return (split_half_samples,)
+
+
+@app.cell(hide_code=True)
+def _(mo, split_half_cis):
+    mo.md(rf"""
+    Subject Split-half 95% CIs = {split_half_cis}
+    """)
+    return
+
+
+@app.cell
+def _(np, split_half_samples):
+    _cleaned = split_half_samples[~np.isnan(split_half_samples)]
+    split_half_cis = np.percentile(_cleaned, [2.5, 50.0, 97.5])
+    return (split_half_cis,)
+
+
+@app.cell
+def _(alt, pl, split_half_samples):
+    _df = pl.DataFrame({"samples": split_half_samples})
+    alt.Chart(_df).mark_bar().encode(
+        alt.X("samples:Q").bin(step=0.025).title("Subject Split-Half R-sq"),
+        y="count()",
+    ).properties(title="Split-Half Correlation")
+    return
 
 
 @app.cell
@@ -725,12 +891,13 @@ def _(
         _boot_dict["sample"] = range(steps)
         boot_df = pl.DataFrame(_boot_dict)
         return boot_df
+
     return (bootstrap_model_fits,)
 
 
 @app.cell
 def _(bootstrap_model_fits):
-    fit_samples = bootstrap_model_fits(2000)
+    fit_samples = bootstrap_model_fits(10000)
     return (fit_samples,)
 
 
@@ -821,9 +988,13 @@ def _(fit_samples, mo):
 
 @app.cell
 def _(Model, alt, fit_samples, model_names):
-    _df = fit_samples.unpivot(
-        model_names, index="sample", variable_name="model", value_name="r^2"
-    ).cast({"model": Model})
+    _df = (
+        fit_samples.head(2000)
+        .unpivot(
+            model_names, index="sample", variable_name="model", value_name="r^2"
+        )
+        .cast({"model": Model})
+    )
 
     alt.Chart(_df).mark_bar().encode(
         alt.X("r^2:Q").bin(step=0.025).title("Explained Variance"),
@@ -967,19 +1138,21 @@ def _(mo, model_vs_noticing):
 
 @app.cell
 def _(CorResult, fit_model, model_vs_noticing, pl):
-    print(
-        model_vs_noticing.group_by("color", maintain_order=True)
-        .agg(
-            regression=pl.struct("covariate", "noticed").map_elements(
-                fit_model, return_dtype=CorResult
-            )
-        )
-        .unnest("regression")
-    )
+    # print(
+    #     model_vs_noticing.group_by("color", maintain_order=True)
+    #     .agg(
+    #         regression=pl.struct("covariate", "noticed").map_elements(
+    #             fit_model,
+    #             return_dtype=CorResult,
+    #             returns_scalar=True,
+    #         )
+    #     )
+    #     .unnest("regression")
+    # )
     print(
         model_vs_noticing.select(
             regression=pl.struct("covariate", "noticed").map_batches(
-                fit_model, return_dtype=CorResult
+                fit_model, return_dtype=CorResult, returns_scalar=True
             )
         ).unnest("regression")
     )
@@ -1226,6 +1399,7 @@ def _(pl):
         )
         grouped, alone = noticed_by_group["noticed"]
         return alone - grouped
+
     return (notice_metric,)
 
 
@@ -1254,6 +1428,7 @@ def _(Callable, np, pl):
             samples[i] = metric(rng(a), rng(b))
 
         return samples
+
     return (bootstrap_noticing_differences,)
 
 

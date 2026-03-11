@@ -1,12 +1,13 @@
 import marimo
 
-__generated_with = "0.19.6"
+__generated_with = "0.20.4"
 app = marimo.App(width="medium")
 
 
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
@@ -21,6 +22,7 @@ def _():
     from scipy.stats import linregress, ttest_ind, chi2_contingency, fisher_exact
     import statsmodels.api as sm
     from statsmodels.formula.api import ols, logit, glm
+
     return alt, fisher_exact, pl, ttest_ind
 
 
@@ -42,7 +44,7 @@ def _(all_models, mo):
 
 @app.cell
 def _(all_models, pl):
-    NOTICE_THRESH = 18
+    NOTICE_THRESH = 24
 
 
     model_notice_summary = (
@@ -157,6 +159,7 @@ def _(by_scene, pl, ttest_ind):
             print(f"MO vs. {alternative}")
             alt_by_scene = by_scene.filter(pl.col("model") == alternative)
             print(ttest_ind(mo_by_scene[column], alt_by_scene[column]))
+
     return (compare_mo,)
 
 
