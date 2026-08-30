@@ -13,7 +13,6 @@ def _():
 
 @app.cell
 def _():
-    import numpy as np
     import polars as pl
     import altair as alt
     from scipy.stats import fisher_exact
@@ -21,20 +20,35 @@ def _():
     return alt, fisher_exact, pl
 
 
+@app.cell(hide_code=True)
+def _3(mo):
+    mo.md(r"""
+    ### Load the study data
+
+    Reads `data/study1/aggregate.csv` into `all_models` — one row per trial (scene, chain, condition).
+    """)
+    return
+
+
 @app.cell
 def _(pl):
     all_models = pl.read_csv("data/study1/aggregate.csv")
-    by_scene = all_models.group_by("model", "scene").agg(
-        pl.col("count_error").mean().alias("count_error"),
-        pl.col("time").mean().alias("time"),
-    )
     return (all_models,)
+
+
+@app.cell(hide_code=True)
+def _4(mo):
+    mo.md(r"""
+    ### Define the notice threshold and summarize detection
+
+    A model run counts as *noticed* when `ndetected > 24`. Builds `model_notice_summary` (per model and condition: yes/no run counts and the noticed fraction via `pct`).
+    """)
+    return
 
 
 @app.cell
 def _(all_models, pl):
     NOTICE_THRESH = 24
-
 
     model_notice_summary = (
         all_models.with_columns(noticed=pl.col("ndetected").gt(NOTICE_THRESH))
@@ -46,16 +60,32 @@ def _(all_models, pl):
         )
         .sort("model", "color")
     )
-
-    notice_by_scene = all_models.group_by("model", "scene", "color").agg(
-        pl.col("ndetected").gt(NOTICE_THRESH).mean().alias("noticed")
-    )
     return NOTICE_THRESH, model_notice_summary
+
+
+@app.cell(hide_code=True)
+def _5(mo):
+    mo.md(r"""
+    ### Inspect the notice summary
+
+    Renders `model_notice_summary` as an interactive data table.
+    """)
+    return
 
 
 @app.cell
 def _(mo, model_notice_summary):
     mo.ui.table(model_notice_summary)
+    return
+
+
+@app.cell(hide_code=True)
+def _6(mo):
+    mo.md(r"""
+    ### Test the shade effect per model
+
+    For each model, runs Fisher's exact test on the 2×2 table of noticed counts (dark vs. light condition) and prints the odds ratio and p-value.
+    """)
     return
 
 
@@ -66,11 +96,23 @@ def _(fisher_exact, model_notice_summary):
         print(f"Model {model[0]}")
         dark = g.row(0)[2:4]
         light = g.row(1)[2:4]
-        print(fisher_exact([dark, light]))
+        print(f"\tresult: {fisher_exact([dark, light])}")
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
+def _7(mo):
+    mo.md(r"""
+    ### Figure 3 results
+
+    Plot notice rates by model and condition
+
+    bar chart: mean notice rate (%) per model for light and dark conditions, with the human baseline from Simons & Chabris (1999) included. Bars are outlined in orange (humans) and blue (Multigranular Optimization) to mark the models featured in the paper.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
 def _(NOTICE_THRESH, all_models, alt, pl):
     # 1. Aggregate empirical model detection rates
     model_rates = (
