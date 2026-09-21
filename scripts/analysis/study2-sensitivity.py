@@ -131,7 +131,7 @@ def _(Color, Param, Parent, gt_counts, pl):
         return df
 
 
-    model_runs = load_model("data/sensitivity/aggregate.csv")
+    model_runs = load_model("data/sensitivity-2/aggregate.csv")
 
     model_trial_level = model_runs.group_by(
         "param", "param_val", "color", "parent", "scene"
@@ -197,61 +197,6 @@ def _(CorResult, fit_model, full_df, pl):
 @app.cell
 def _(fits, mo):
     mo.ui.table(fits)
-    return
-
-
-@app.cell
-def _(
-    CorResult,
-    Model,
-    all_models,
-    ctrl_noticed,
-    fit_model,
-    main_noticed,
-    pl,
-    swapped_df,
-    unswapped_df,
-):
-    def fit_models_to_human(human: pl.DataFrame, model: pl.DataFrame):
-        results = []
-
-        for name, val in model.group_by("param", ""):
-            model_vs_noticing = (
-                pl.concat([unswapped_df, swapped_df])
-                .group_by("color", "scene", "parent")
-                .agg(pl.mean("noticed"))
-                .with_columns(pl.col("scene").cast(pl.UInt8))
-                .join(model, on=["scene", "parent", "color"], how="left")
-                .with_columns(pl.col("noticed").fill_null(strategy="zero"))
-            )
-
-            fit = model_vs_noticing.select(
-                regression=pl.struct("covariate", "noticed").map_batches(
-                    fit_model,
-                    return_dtype=CorResult,
-                    returns_scalar=True,
-                )
-            ).unnest("regression")
-            fit = fit.with_columns(model=pl.lit(name[0]))
-            results.append(fit)
-
-        results = (
-            pl.concat(results, how="vertical")
-            .select(["model", "r^2", "p_value"])
-            .with_columns(model=pl.col("model").cast(Model))
-            .sort("model")
-        )
-        return results
-
-
-    models_trial_lvl = all_models.group_by("model", "color", "parent", "scene").agg(
-        covariate=pl.col("noticed").mean()
-    )
-
-    models_grouped = models_trial_lvl.group_by("model")
-    model_fits = fit_models_to_human(main_noticed, ctrl_noticed, models_grouped)
-    model_names = model_fits["model"].to_numpy()
-    print(model_fits)
     return
 
 

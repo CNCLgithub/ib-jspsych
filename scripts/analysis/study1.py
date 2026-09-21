@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.20.4"
+__generated_with = "0.24.0"
 app = marimo.App(width="medium")
 
 
@@ -113,7 +113,7 @@ def _7(mo):
 
 
 @app.cell(hide_code=True)
-def _(NOTICE_THRESH, all_models, alt, pl):
+def _(NOTICE_THRESH, all_models, pl):
     # 1. Aggregate empirical model detection rates
     model_rates = (
         all_models.with_columns(noticed=pl.col("ndetected").gt(NOTICE_THRESH))
@@ -144,7 +144,7 @@ def _(NOTICE_THRESH, all_models, alt, pl):
             "order": [0, 1, 2, 3, 4],
             "stroke_color": [
                 "#e67319",
-                "#0085db",
+                "#33a3dd",
                 "transparent",
                 "transparent",
                 "transparent",
@@ -166,12 +166,26 @@ def _(NOTICE_THRESH, all_models, alt, pl):
         "Just\nAttention",
         "Fixed\nResource",
     ]
+    FONT = "Georgia, serif"
+    return FONT, category_order, chart_df
 
-    chart = (
+
+@app.cell
+def _(FONT, alt, category_order, chart_df, pl):
+    # 1. Bar chart — no header, no config
+    bar_chart = (
         alt.Chart(chart_df)
-        .mark_bar(strokeWidth=1.5)
+        .mark_bar(strokeWidth=3, size=28)
         .encode(
-            x=alt.X("color:N", title=None, axis=None, sort=["light", "dark"]),
+            x=alt.X(
+                "color:N",
+                title=None,
+                axis=None,
+                sort=["light", "dark"],
+                scale=alt.Scale(
+                    type="band", paddingInner=0.25, paddingOuter=0.4
+                ),
+            ),
             y=alt.Y(
                 "notice_rate:Q",
                 title="Notice Rate (%)",
@@ -179,45 +193,82 @@ def _(NOTICE_THRESH, all_models, alt, pl):
                 axis=alt.Axis(
                     values=[5, 50, 100],
                     tickCount=3,
-                    titleFontSize=14,
-                    labelFontSize=12,
+                    titleFontSize=17,
+                    labelFontSize=13,
+                    titleFont=FONT,
+                    labelFont=FONT,
                     domainWidth=1.5,
                 ),
             ),
             color=alt.Color(
                 "color:N",
                 scale=alt.Scale(
-                    domain=["light", "dark"],
-                    range=["#ebebeb", "#3a3a3a"],
+                    domain=["light", "dark"], range=["#ebebeb", "#3a3a3a"]
                 ),
                 legend=alt.Legend(
                     title="Gorilla\nshade",
-                    titleFontSize=12,
-                    labelFontSize=11,
+                    titleFontSize=14,
+                    labelFontSize=12,
                     orient="right",
+                    titleFont=FONT,
+                    labelFont=FONT,
                 ),
             ),
-            stroke=alt.Stroke(
-                "stroke_color:N",
-                scale=None,
-                legend=None,
-            ),
+            stroke=alt.Stroke("stroke_color:N", scale=None, legend=None),
             column=alt.Column(
                 "model_label:N",
-                title=None,
                 sort=category_order,
-                header=alt.Header(
-                    labelAngle=-45,
-                    labelAlign="right",
-                    labelBaseline="top",
-                    labelFontSize=11,
-                    labelPadding=6,
-                ),
+                title=None,
+                header=alt.Header(labelFontSize=0, labelPadding=0, title=None),
             ),
         )
+        .properties(width=80, height=105)  # y-axis scaled to 70% (was 150)
+    )
+
+    # 2. Label strip — one text mark per label line
+    label_df = (
+        pl.DataFrame({"model_label": category_order})
+        .with_columns(line=pl.col("model_label").str.split("\n"))
+        .explode("line")
+        .with_columns(
+            line_idx=(pl.col("line").cum_count().over("model_label") - 1).alias(
+                "line_idx"
+            )
+        )
+        .with_columns(
+            y_pos=((pl.lit(1) - pl.col("line_idx")) * 16 + 22).alias("y_pos")
+        )
+    )
+
+    text_chart = (
+        alt.Chart(label_df)
+        .mark_text(
+            angle=330,
+            align="center",
+            baseline="middle",
+            fontSize=13,
+            font=FONT,
+        )
+        .encode(
+            text="line:N",
+            x=alt.X(value=32),
+            y=alt.Y("y_pos:Q", title=None, axis=None),
+            column=alt.Column(
+                "model_label:N",
+                sort=category_order,
+                title=None,
+                header=alt.Header(labelFontSize=0, labelPadding=0, title=None),
+            ),
+        )
+        .properties(width=64, height=48)
+    )
+
+    # 3. Concatenate; config at top level
+    chart = (
+        alt.vconcat(bar_chart, text_chart, spacing=0)
         .configure_view(stroke=None)
         .configure_axis(grid=False)
-        .properties(width=30, height=180)
+        .configure_facet(spacing=18)
     )
 
     chart
