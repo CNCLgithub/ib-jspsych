@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.24.0"
+__generated_with = "0.24.2"
 app = marimo.App(width="medium")
 
 
@@ -71,7 +71,7 @@ def _(pl):
     # Polars dataseries types
     Parent = pl.Enum(["grouped", "lone"])
     Color = pl.Enum(["light", "dark"])
-    Model = pl.Enum(["Human", "mo", "ja", "ta", "fr"])
+    Model = pl.Enum(["Human", "mo", "ja", "ta", "fr", "ecc"])
     return Color, Model, Parent
 
 
@@ -547,7 +547,9 @@ def _(Color, Model, Parent, gt_counts, pl):
         )
         return df
 
-    all_models = load_models("data/study2/aggregate.csv")
+    all_models = (
+        load_models("data/study2/aggregate.csv")
+    )
     return (all_models,)
 
 
@@ -860,7 +862,7 @@ def _(linregress, pl):
 
 
 @app.cell
-def _(CorResult, all_models, all_noticed, fit_model, pl):
+def _(CorResult, all_models, all_noticed, fit_model, periphery_df_stub, pl):
     def fit_models_to_human(humans: pl.DataFrame, models: pl.DataFrame):
 
         df = humans.join(
@@ -881,9 +883,12 @@ def _(CorResult, all_models, all_noticed, fit_model, pl):
         )
         return fits
 
-    models_trial_lvl = all_models.group_by(
+    models_trial_lvl = (
+        all_models.group_by(
         "model", "color", "parent", "scene"
     ).agg(covariate=pl.col("noticed").mean())
+    .vstack(periphery_df_stub)
+    )
     model_names = (
         models_trial_lvl.select(pl.col("model").unique())
         .sort("model")["model"]
@@ -895,6 +900,18 @@ def _(CorResult, all_models, all_noticed, fit_model, pl):
     model_fits = fit_models_to_human(humans_trial_lvl, models_trial_lvl)
     print(model_fits)
     return fit_models_to_human, humans_trial_lvl, model_names, models_trial_lvl
+
+
+@app.cell
+def _(mo, models_trial_lvl):
+    mo.ui.table(models_trial_lvl)
+    return
+
+
+@app.cell
+def _(mo, models_trial_lvl):
+    mo.ui.table(models_trial_lvl)
+    return
 
 
 @app.cell(hide_code=True)
@@ -1083,11 +1100,12 @@ def _(fit_samples, np):
     ja_cis = np.percentile(fit_samples.select("ja").to_numpy(), [2.5, 97.5])
     fr_cis = np.percentile(fit_samples.select("fr").to_numpy(), [2.5, 97.5])
     ta_cis = np.percentile(fit_samples.select("ta").to_numpy(), [2.5, 97.5])
-    return fr_cis, ja_cis, mo_cis, ta_cis
+    ecc_cis = np.percentile(fit_samples.select("ecc").to_numpy(), [2.5, 97.5])
+    return ecc_cis, fr_cis, ja_cis, mo_cis, ta_cis
 
 
 @app.cell(hide_code=True)
-def _(fr_cis, ja_cis, mo, mo_cis, ta_cis):
+def _(ecc_cis, fr_cis, ja_cis, mo, mo_cis, ta_cis):
     mo.md(rf"""
     MO 95% CIs = {mo_cis}
 
@@ -1096,6 +1114,8 @@ def _(fr_cis, ja_cis, mo, mo_cis, ta_cis):
     TA 95% CIs = {ta_cis}
 
     FR 95% CIs = {fr_cis}
+
+    ECC 95% CIs = {ecc_cis}
     """)
     return
 
@@ -1119,7 +1139,15 @@ def _(fit_samples, np, pl):
     mo_vs_fr_CIs = np.percentile(mo_vs_fr_diff["diff"].to_numpy(), [2.5, 97.5])
 
     mo_vs_fr_pval = mo_vs_fr_diff.select(pl.col("diff") < 0).mean().item()
+
+    mo_vs_ecc_diff = fit_samples.select(diff=pl.col("mo") - pl.col("ecc"))
+
+    mo_vs_ecc_CIs = np.percentile(mo_vs_ecc_diff["diff"].to_numpy(), [2.5, 97.5])
+
+    mo_vs_ecc_pval = mo_vs_ecc_diff.select(pl.col("diff") < 0).mean().item()
     return (
+        mo_vs_ecc_CIs,
+        mo_vs_ecc_pval,
         mo_vs_fr_CIs,
         mo_vs_fr_pval,
         mo_vs_ja_CIs,
@@ -1132,6 +1160,8 @@ def _(fit_samples, np, pl):
 @app.cell(hide_code=True)
 def _(
     mo,
+    mo_vs_ecc_CIs,
+    mo_vs_ecc_pval,
     mo_vs_fr_CIs,
     mo_vs_fr_pval,
     mo_vs_ja_CIs,
@@ -1151,6 +1181,10 @@ def _(
     MO > Fixed Resource: p-value = {mo_vs_fr_pval}
 
     MO > Fixed Resource: 95% CIs = {mo_vs_fr_CIs}
+
+    MO > Peripheral Eccentricity: p-value = {mo_vs_ecc_pval}
+
+    MO > Peripheral Eccentricity: 95% CIs = {mo_vs_ecc_CIs}
     """)
     return
 
@@ -1325,7 +1359,7 @@ def _(FONT, alt, ctrl_noticed, main_noticed, mo_model, pl):
     )
 
     chart
-    return
+    return DARK_GRAY, LIGHT_GRAY, LINE_COLOR, LINE_WIDTH
 
 
 @app.cell(hide_code=True)
@@ -1333,6 +1367,149 @@ def _(mo):
     mo.md(r"""
     ## Centroid Analysis
     """)
+    return
+
+
+@app.cell
+def _(Color, Model, Parent, pl):
+    periphery_df_stub = (
+        pl.read_csv("data/periphery.csv", 
+                    schema={
+                        "scene": pl.UInt8, 
+                        "color": Color, 
+                        "parent": Parent, 
+                        "chain" : pl.Int64, 
+                        "distance": pl.Float64
+                    },)
+        .group_by("scene", "color", "parent")
+        .agg(pl.col("distance").mean().alias("covariate"))
+        .with_columns(model = pl.lit("ecc").cast(Model))
+        .select(["model", "color", "parent", "scene", "covariate"])
+    )
+    return (periphery_df_stub,)
+
+
+@app.cell
+def _(Color, Parent, pl):
+    periphery_df = (
+        pl.read_csv("data/periphery.csv", 
+                    schema={
+                        "scene": pl.UInt8, 
+                        "color": Color, 
+                        "parent": Parent, 
+                        "chain" : pl.Int64, 
+                        "distance": pl.Float64
+                    },)
+        .group_by("scene", "color", "parent")
+        .agg(pl.col("distance").mean().alias("periphery"))
+    )
+    return (periphery_df,)
+
+
+@app.cell
+def _(
+    DARK_GRAY,
+    FONT,
+    LIGHT_GRAY,
+    LINE_COLOR,
+    LINE_WIDTH,
+    alt,
+    ctrl_noticed,
+    main_noticed,
+    mo,
+    periphery_df,
+    pl,
+):
+    periphery_vs_noticing = (
+        pl.concat([main_noticed, ctrl_noticed])
+        .group_by("color", "scene", "parent")
+        .agg(pl.mean("noticed"))
+        .with_columns(pl.col("scene").cast(pl.UInt8))
+        .join(periphery_df, on=["scene", "parent", "color"], how="left")
+        .with_columns(pl.col("noticed").fill_null(strategy="zero") * 100)
+    )
+
+    _base = alt.Chart(periphery_vs_noticing).encode(
+        alt.X("periphery:Q")
+        .title("Periphery extent (world units)")
+        .axis(tickCount=6),
+        alt.Y("noticed:Q")
+        .title("Human Noticed (%)")
+        .scale(domain=[-4, 85])
+        .axis(tickCount=6),
+        alt.Shape(
+            "parent:N",
+            scale=alt.Scale(
+                domain=["lone", "grouped"], range=["square", "circle"]
+            ),
+            legend=None,
+        ),
+    )
+
+    _points = _base.mark_point(
+        size=150,
+        filled=True,          # let the fill channel control the interior
+        strokeWidth=2.0,
+    ).encode(
+        fill=alt.Fill(
+            "color:N",
+            scale=alt.Scale(
+                domain=["light", "dark"],
+                range=[LIGHT_GRAY, "transparent"],
+            ),
+            legend=None,
+        ),
+        stroke=alt.Stroke(
+            "color:N",
+            scale=alt.Scale(
+                domain=["light", "dark"], range=[LIGHT_GRAY, DARK_GRAY]
+            ),
+            legend=None,
+        ),
+        tooltip=[
+            "scene:Q",
+            "color:N",
+            "parent:N",
+            "periphery:Q", 
+        ],
+    )
+
+    _regression = (
+        _base.transform_regression(
+            "periphery", "noticed", method="linear"
+        )
+        .mark_line(color=LINE_COLOR, strokeWidth=LINE_WIDTH)
+        .encode(color=alt.value(LINE_COLOR), size=alt.value(LINE_WIDTH))
+    )
+
+    _chart = (
+        (_regression + _points)
+        .properties(width=500, height=250)
+        .configure_view(stroke=None)
+        .configure_axis(
+            grid=False,
+            domain=True,
+            domainWidth=1.2,
+            tickColor="#3a3a3a",
+            labelFont=FONT,
+            labelFontSize=14,
+            titleFont=FONT,
+            titleFontSize=17,
+        )
+        .configure_axisX(titlePadding=10)
+        .configure_axisY(titlePadding=6)
+    )
+
+    mo.ui.altair_chart(_chart)
+    return (periphery_vs_noticing,)
+
+
+@app.cell
+def _(periphery_vs_noticing, safe_linear_fit):
+    safe_linear_fit(
+        periphery_vs_noticing["periphery"],
+        periphery_vs_noticing["noticed"],
+    )
     return
 
 
