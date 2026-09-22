@@ -1,0 +1,241 @@
+scene,parent,uid,noticed,description,rt,order,color
+1,grouped,123.0,false,"",3098.0,22.0,light
+1,grouped,33.0,false,"",5610.0,22.0,light
+1,grouped,79.0,false,"",4199.0,22.0,light
+1,grouped,22.0,false,"",7646.0,22.0,light
+1,grouped,11.0,false,"",4801.0,22.0,light
+1,grouped,111.0,false,"",2518.0,30.0,light
+1,grouped,58.0,false,"",3126.0,22.0,light
+1,grouped,70.0,false,"",5075.0,38.0,light
+1,grouped,45.0,true,one of the light ones split into 2,3132.0,22.0,light
+2,grouped,46.0,false,"",3351.0,22.0,light
+2,grouped,103.0,true,"One of the balls split into two so there were 5 white balls, and then it went back to 4",2148.0,22.0,light
+2,grouped,112.0,false,"",2848.0,22.0,light
+2,grouped,27.0,false,"",3685.0,22.0,light
+2,grouped,35.0,false,"",4077.0,22.0,light
+2,grouped,84.0,false,"",2598.0,22.0,light
+2,grouped,92.0,false,"",2870.0,22.0,light
+2,grouped,18.0,false,"",8559.0,30.0,light
+2,grouped,1.0,false,"",5589.0,30.0,light
+2,grouped,60.0,false,"",2524.0,22.0,light
+3,grouped,47.0,false,"",2944.0,22.0,light
+3,grouped,121.0,false,The ball dragged across the left panel before it bounced.,6627.0,22.0,light
+3,grouped,3.0,false,"",5458.0,22.0,light
+3,grouped,73.0,true,"One of the balls morphed into 2, then back, was not sure if I should conunt it as 1 or 2 bounces, instructions are not clear",1978.0,22.0,light
+3,grouped,63.0,false,"",6345.0,30.0,light
+3,grouped,37.0,false,"",3408.0,22.0,light
+3,grouped,109.0,false,"",2498.0,22.0,light
+3,grouped,85.0,false,"",3720.0,22.0,light
+3,grouped,26.0,false,"",4198.0,22.0,light
+3,grouped,20.0,false,"",3205.0,38.0,light
+3,grouped,100.0,false,"",2760.0,22.0,light
+4,grouped,75.0,false,"",3264.0,22.0,light
+4,grouped,86.0,false,"",1559.0,22.0,light
+4,grouped,110.0,false,"",3855.0,30.0,light
+4,grouped,101.0,false,"",3117.0,22.0,light
+4,grouped,12.0,false,"",5610.0,22.0,light
+4,grouped,55.0,false,"",2695.0,22.0,light
+4,grouped,23.0,false,"",9727.0,22.0,light
+4,grouped,66.0,false,"",7337.0,22.0,light
+4,grouped,5.0,false,"",3405.0,22.0,light
+4,grouped,115.0,false,"",3942.0,22.0,light
+4,grouped,44.0,true,one of the light orbs split into two,2619.0,22.0,light
+5,grouped,77.0,false,"",4986.0,22.0,light
+5,grouped,56.0,false,"",14328.0,22.0,light
+5,grouped,24.0,false,"",6480.0,22.0,light
+5,grouped,114.0,false,"",6510.0,22.0,light
+5,grouped,8.0,false,"",7340.0,62.0,light
+5,grouped,91.0,false,"",2951.0,22.0,light
+5,grouped,51.0,false,"",4143.0,22.0,light
+5,grouped,124.0,false,"",5906.0,30.0,light
+5,grouped,102.0,true,I think there was an extra light object,4098.0,22.0,light
+5,grouped,40.0,false,"",4016.0,22.0,light
+6,grouped,16.0,false,"",5679.0,22.0,light
+6,grouped,32.0,false,"",3248.0,22.0,light
+6,grouped,122.0,false,"",3207.0,22.0,light
+6,grouped,105.0,true,an extra white ball,3647.0,30.0,light
+6,grouped,9.0,false,"",1689.0,22.0,light
+6,grouped,90.0,false,"There were not 4 white balls, but 5, at one point.",2993.0,22.0,light
+6,grouped,43.0,false,"",5753.0,38.0,light
+6,grouped,52.0,false,"",3014.0,22.0,light
+6,grouped,65.0,false,"",2527.0,22.0,light
+1,lone,107.0,true,the ball doubled to 2,8007.0,30.0,light
+1,lone,0.0,true,"One ball turned into two balls, then again merged to one ball",2798.0,22.0,light
+1,lone,119.0,false,"",3658.0,22.0,light
+1,lone,61.0,false,"",4274.0,22.0,light
+1,lone,98.0,false,It was 3 bounces every time,5973.0,22.0,light
+1,lone,54.0,true,the single ball duplicated into two balls,2602.0,22.0,light
+1,lone,34.0,false,"",5519.0,22.0,light
+1,lone,71.0,false,"",2870.0,22.0,light
+1,lone,17.0,false,"",10579.0,22.0,light
+1,lone,25.0,true,there was two balls in one,3221.0,22.0,light
+1,lone,83.0,true,"One ball split into two before hitting a wall, then joined together as one. ",2416.0,22.0,light
+2,lone,2.0,false,"",3638.0,22.0,light
+2,lone,19.0,false,"",3145.0,22.0,light
+2,lone,72.0,false,Overlapping balls,2803.0,22.0,light
+2,lone,120.0,false,"",2912.0,30.0,light
+2,lone,28.0,false,"",4102.0,22.0,light
+2,lone,49.0,true,One light object split in to two,2065.0,30.0,light
+2,lone,99.0,false,"",5335.0,22.0,light
+2,lone,36.0,true,one light ball split into two light balls to bounce off the wall and then they merged back into one light ball,4479.0,22.0,light
+2,lone,62.0,false,Two balls collided and bounced on the wall together. ,2853.0,22.0,light
+3,lone,21.0,false,5 light balls,4221.0,22.0,light
+3,lone,74.0,true,first time 2 white balls bounced of the wall.,4803.0,22.0,light
+3,lone,30.0,false,"",7910.0,30.0,light
+3,lone,113.0,false,"",2153.0,22.0,light
+3,lone,88.0,false,There was a fifth white ball.,4231.0,46.0,light
+3,lone,50.0,true,One of the balls split into two,2617.0,22.0,light
+3,lone,4.0,true,An additional light dot appeared,2539.0,30.0,light
+3,lone,93.0,false,Another light object ,2612.0,22.0,light
+3,lone,38.0,false,"",1897.0,30.0,light
+3,lone,64.0,false,"",4796.0,22.0,light
+4,lone,13.0,false,"",6185.0,22.0,light
+4,lone,96.0,true,One of the light dots split into two,2902.0,22.0,light
+4,lone,67.0,true,one white ball disappeared,4947.0,22.0,light
+4,lone,48.0,true,one of the white circles split into two,2348.0,22.0,light
+4,lone,39.0,true,I noticed an extra object merging with one of the others. ,4697.0,22.0,light
+4,lone,29.0,false,"",2649.0,22.0,light
+4,lone,76.0,true,two balls joined together,3375.0,22.0,light
+4,lone,89.0,true,Two of the light objects seemed to merge,4311.0,22.0,light
+4,lone,6.0,true,An extra white ball,2630.0,22.0,light
+4,lone,116.0,true,One of the balls became two balls and then went back to being one ball. Either that or two balls were totally in sync in their movement and it only looked like one ball until they came out of sync for a second and then went got back in sync.,3638.0,22.0,light
+5,lone,82.0,false,"",6597.0,22.0,light
+5,lone,41.0,false,at one point there were 5 white balls,3821.0,22.0,light
+5,lone,104.0,false,"",5731.0,22.0,light
+5,lone,94.0,true,one ball became two,2813.0,22.0,light
+5,lone,117.0,true,two balls showed up when it was one ball,2111.0,22.0,light
+5,lone,68.0,true,one ball split into 2 then became one again,2731.0,46.0,light
+5,lone,31.0,true,The white ball bouncing on the wall split into two balls for a few seconds.,2038.0,22.0,light
+5,lone,7.0,true,An additional white ball appeared,1687.0,22.0,light
+5,lone,14.0,false,"",3319.0,22.0,light
+5,lone,59.0,false,"",5131.0,22.0,light
+6,lone,69.0,true,an extra light object appeared,4905.0,30.0,light
+6,lone,57.0,false,"",1849.0,22.0,light
+6,lone,10.0,false,"",2744.0,30.0,light
+6,lone,81.0,true,One ball split into two,2040.0,22.0,light
+6,lone,15.0,false,One of the ball was on top of another ball ,2265.0,22.0,light
+6,lone,106.0,true,Two balls seemed to appear out of one right after it bounced off the wall.,3435.0,22.0,light
+6,lone,118.0,false,"",4163.0,22.0,light
+6,lone,42.0,true,it seemed like 2 balls were in the same place for a while,3871.0,22.0,light
+6,lone,53.0,false,"",4693.0,22.0,light
+6,lone,97.0,false,"",3735.0,22.0,light
+1,grouped,1090.0,false,"",4963.0,22.0,dark
+1,grouped,1054.0,false,"",3404.0,22.0,dark
+1,grouped,1065.0,false,"",2437.0,22.0,dark
+1,grouped,1010.0,false,"",2499.0,22.0,dark
+1,grouped,1032.0,false,"",5031.0,22.0,dark
+1,grouped,1020.0,false,"",1964.0,30.0,dark
+1,grouped,1102.0,false,"",5252.0,22.0,dark
+1,grouped,1043.0,false,"",3300.0,22.0,dark
+1,grouped,1077.0,false,"",4766.0,22.0,dark
+1,grouped,1113.0,false,"",2931.0,22.0,dark
+2,grouped,1103.0,false,"",6127.0,22.0,dark
+2,grouped,1078.0,false,"",3567.0,22.0,dark
+2,grouped,1000.0,false,"",2953.0,30.0,dark
+2,grouped,1118.0,false,"",5827.0,22.0,dark
+2,grouped,1067.0,false,"",3084.0,22.0,dark
+2,grouped,1035.0,false,"",2132.0,22.0,dark
+2,grouped,1012.0,false,"",4556.0,38.0,dark
+2,grouped,1093.0,false,"",3909.0,30.0,dark
+2,grouped,1022.0,false,"",2171.0,22.0,dark
+2,grouped,1047.0,false,"",4831.0,22.0,dark
+3,grouped,1068.0,false,"",6405.0,30.0,dark
+3,grouped,1002.0,false,"",3240.0,22.0,dark
+3,grouped,1014.0,false,"",2822.0,22.0,dark
+3,grouped,1119.0,false,"",3869.0,22.0,dark
+3,grouped,1108.0,false,"",2138.0,22.0,dark
+3,grouped,1026.0,false,"",5104.0,22.0,dark
+3,grouped,1079.0,false,"",4918.0,22.0,dark
+3,grouped,1038.0,false,"",4577.0,22.0,dark
+3,grouped,1049.0,false,"",2632.0,22.0,dark
+3,grouped,1059.0,false,"",2368.0,22.0,dark
+3,grouped,1096.0,false,"",8080.0,22.0,dark
+4,grouped,1057.0,false,"",3940.0,22.0,dark
+4,grouped,1040.0,false,It was always 4,2294.0,22.0,dark
+4,grouped,1004.0,false,"",5520.0,22.0,dark
+4,grouped,1105.0,false,"",6725.0,22.0,dark
+4,grouped,1081.0,false,"",9054.0,22.0,dark
+4,grouped,1017.0,false,"",1957.0,22.0,dark
+4,grouped,1070.0,false,"",3610.0,22.0,dark
+4,grouped,1091.0,false,"",7384.0,22.0,dark
+4,grouped,1116.0,false,everything seemed to be circling ,6300.0,22.0,dark
+4,grouped,1028.0,false,some bounced before getting to the edge so hard to know if those count,3014.0,22.0,dark
+5,grouped,1076.0,false,"",10175.0,22.0,dark
+5,grouped,1042.0,false,"",2358.0,30.0,dark
+5,grouped,1031.0,false,"",5503.0,22.0,dark
+5,grouped,1101.0,false,"",5250.0,22.0,dark
+5,grouped,1089.0,false,"",3687.0,22.0,dark
+5,grouped,1064.0,false,"",1379.0,22.0,dark
+5,grouped,1055.0,false,"",5698.0,22.0,dark
+5,grouped,1006.0,false,I noticed sometimes the balls would head toward the wall but move unnaturally  out of the way.,4983.0,22.0,dark
+6,grouped,1123.0,false,"",2653.0,22.0,dark
+6,grouped,1023.0,false,"",4404.0,22.0,dark
+6,grouped,1084.0,false,"",3232.0,22.0,dark
+6,grouped,1095.0,false,"",2528.0,22.0,dark
+6,grouped,1051.0,false,"",4760.0,30.0,dark
+6,grouped,1063.0,false,"",2417.0,22.0,dark
+6,grouped,1041.0,false,"",5853.0,22.0,dark
+6,grouped,1008.0,false,"",3618.0,22.0,dark
+6,grouped,1073.0,false,"",2779.0,22.0,dark
+6,grouped,1019.0,false,"",6271.0,22.0,dark
+1,lone,1021.0,false,"",2057.0,22.0,dark
+1,lone,1088.0,false,"",5143.0,22.0,dark
+1,lone,1112.0,false,"",35690.0,22.0,dark
+1,lone,1124.0,false,"",3765.0,22.0,dark
+1,lone,1066.0,false,"",4513.0,30.0,dark
+1,lone,1011.0,false,"",7015.0,22.0,dark
+1,lone,1053.0,false,"",7375.0,30.0,dark
+1,lone,1044.0,false,"",5231.0,22.0,dark
+1,lone,1100.0,false,"",1546.0,30.0,dark
+1,lone,1085.0,false,"",3140.0,22.0,dark
+2,lone,1013.0,false,"",2970.0,22.0,dark
+2,lone,1058.0,false,"",2519.0,22.0,dark
+2,lone,1092.0,false,"",4285.0,22.0,dark
+2,lone,1025.0,false,"",3102.0,22.0,dark
+2,lone,1001.0,false,"",2545.0,30.0,dark
+2,lone,1104.0,false,"",9327.0,22.0,dark
+2,lone,1037.0,false,"",5201.0,22.0,dark
+2,lone,1087.0,false,"",1887.0,22.0,dark
+2,lone,1075.0,false,"",5646.0,22.0,dark
+2,lone,1048.0,false,"",2827.0,22.0,dark
+2,lone,1114.0,false,"",3314.0,22.0,dark
+3,lone,1015.0,false,"",4455.0,22.0,dark
+3,lone,1060.0,false,"",3543.0,22.0,dark
+3,lone,1120.0,false,"",3010.0,22.0,dark
+3,lone,1109.0,false,"",3742.0,22.0,dark
+3,lone,1027.0,false,"",4313.0,22.0,dark
+3,lone,1003.0,false,"",4411.0,22.0,dark
+3,lone,1080.0,false,"",6114.0,22.0,dark
+3,lone,1069.0,false,"",6839.0,22.0,dark
+3,lone,1039.0,false,"",3109.0,22.0,dark
+3,lone,1050.0,false,"",6087.0,22.0,dark
+3,lone,1097.0,false,"",4919.0,22.0,dark
+4,lone,1033.0,false,"",3342.0,22.0,dark
+4,lone,1082.0,false,"",3996.0,22.0,dark
+4,lone,1045.0,false,"",2778.0,22.0,dark
+4,lone,1110.0,false,"",1973.0,22.0,dark
+4,lone,1071.0,false,"",8024.0,22.0,dark
+4,lone,1005.0,false,The balls often make u-turns and don't actually bounce off the wall to change direction.,7031.0,22.0,dark
+4,lone,1016.0,false,"",3439.0,22.0,dark
+4,lone,1061.0,false,"",3335.0,30.0,dark
+4,lone,1099.0,false,"",5541.0,22.0,dark
+4,lone,1029.0,false,More balls would get closer to the wall and turn around right before they would usually bounce.,4842.0,22.0,dark
+5,lone,1062.0,false,"",2666.0,30.0,dark
+5,lone,1098.0,false,"",5805.0,22.0,dark
+5,lone,1007.0,false,"",3566.0,22.0,dark
+5,lone,1111.0,false,"",2292.0,22.0,dark
+5,lone,1083.0,false,"",5768.0,22.0,dark
+5,lone,1018.0,false,"",2212.0,30.0,dark
+5,lone,1034.0,false,"",5259.0,22.0,dark
+5,lone,1122.0,false,"",5362.0,22.0,dark
+5,lone,1030.0,false,"",2754.0,30.0,dark
+6,lone,1024.0,false,"",5503.0,22.0,dark
+6,lone,1056.0,false,"",11417.0,22.0,dark
+6,lone,1036.0,false,"",4022.0,22.0,dark
+6,lone,1094.0,false,"",5932.0,38.0,dark
+6,lone,1117.0,false,one of the light balls almost bumped into the wall but then it changed course,6760.0,22.0,dark
+6,lone,1107.0,false,"",7319.0,22.0,dark
+6,lone,1086.0,false,"",2871.0,22.0,dark
+6,lone,1009.0,false,"",3189.0,22.0,dark
+6,lone,1074.0,false,"",4978.0,22.0,dark
+6,lone,1052.0,false,"",3115.0,22.0,dark

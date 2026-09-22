@@ -1,0 +1,126 @@
+uid,scene,grouped,noticed,description,rt,order
+0,1,false,true,"One ball turned into two balls, then again merged to one ball",2798.0,22
+1,2,true,false,"",5589.0,30
+2,2,false,false,"",3638.0,22
+3,3,true,false,"",5458.0,22
+4,3,false,true,An additional light dot appeared,2539.0,30
+5,4,true,false,"",3405.0,22
+6,4,false,true,An extra white ball,2630.0,22
+7,5,false,true,An additional white ball appeared,1687.0,22
+8,5,true,false,"",7340.0,62
+9,6,true,false,"",1689.0,22
+10,6,false,false,"",2744.0,30
+11,1,true,false,"",4801.0,22
+12,4,true,false,"",5610.0,22
+13,4,false,false,"",6185.0,22
+14,5,false,false,"",3319.0,22
+15,6,false,true,One of the ball was on top of another ball ,2265.0,22
+16,6,true,false,"",5679.0,22
+17,1,false,false,"",10579.0,22
+18,2,true,false,"",8559.0,30
+19,2,false,false,"",3145.0,22
+20,3,true,false,"",3205.0,38
+21,3,false,true,5 light balls,4221.0,22
+22,1,true,false,"",7646.0,22
+23,4,true,false,"",9727.0,22
+24,5,true,false,"",6480.0,22
+25,1,false,true,there was two balls in one,3221.0,22
+26,3,true,false,"",4198.0,22
+27,2,true,false,"",3685.0,22
+28,2,false,false,"",4102.0,22
+29,4,false,false,"",2649.0,22
+30,3,false,false,"",7910.0,30
+31,5,false,true,The white ball bouncing on the wall split into two balls for a few seconds.,2038.0,22
+32,6,true,false,"",3248.0,22
+33,1,true,false,"",5610.0,22
+34,1,false,false,"",5519.0,22
+35,2,true,false,"",4077.0,22
+36,2,false,true,one light ball split into two light balls to bounce off the wall and then they merged back into one light ball,4479.0,22
+37,3,true,false,"",3408.0,22
+38,3,false,false,"",1897.0,30
+39,4,false,true,I noticed an extra object merging with one of the others. ,4697.0,22
+40,5,true,false,"",4016.0,22
+41,5,false,true,at one point there were 5 white balls,3821.0,22
+42,6,false,true,it seemed like 2 balls were in the same place for a while,3871.0,22
+43,6,true,false,"",5753.0,38
+44,4,true,true,one of the light orbs split into two,2619.0,22
+45,1,true,true,one of the light ones split into 2,3132.0,22
+46,2,true,false,"",3351.0,22
+47,3,true,false,"",2944.0,22
+48,4,false,true,one of the white circles split into two,2348.0,22
+49,2,false,true,One light object split in to two,2065.0,30
+50,3,false,true,One of the balls split into two,2617.0,22
+51,5,true,false,"",4143.0,22
+52,6,true,false,"",3014.0,22
+53,6,false,false,"",4693.0,22
+54,1,false,true,the single ball duplicated into two balls,2602.0,22
+55,4,true,false,"",2695.0,22
+56,5,true,false,"",14328.0,22
+57,6,false,false,"",1849.0,22
+58,1,true,false,"",3126.0,22
+59,5,false,false,"",5131.0,22
+60,2,true,false,"",2524.0,22
+61,1,false,false,"",4274.0,22
+62,2,false,true,Two balls collided and bounced on the wall together. ,2853.0,22
+63,3,true,false,"",6345.0,30
+64,3,false,false,"",4796.0,22
+65,6,true,false,"",2527.0,22
+66,4,true,false,"",7337.0,22
+67,4,false,true,one white ball disappeared,4947.0,22
+68,5,false,true,one ball split into 2 then became one again,2731.0,46
+69,6,false,true,an extra light object appeared,4905.0,30
+70,1,true,false,"",5075.0,38
+71,1,false,false,"",2870.0,22
+72,2,false,true,Overlapping balls,2803.0,22
+73,3,true,true,"One of the balls morphed into 2, then back, was not sure if I should conunt it as 1 or 2 bounces, instructions are not clear",1978.0,22
+74,3,false,true,first time 2 white balls bounced of the wall.,4803.0,22
+75,4,true,false,"",3264.0,22
+76,4,false,true,two balls joined together,3375.0,22
+77,5,true,false,"",4986.0,22
+78,6,true,false,"",3287.0,22
+79,1,true,false,"",4199.0,22
+80,1,false,false,"",3590.0,30
+81,6,false,true,One ball split into two,2040.0,22
+82,5,false,false,"",6597.0,22
+83,1,false,true,"One ball split into two before hitting a wall, then joined together as one. ",2416.0,22
+84,2,true,false,"",2598.0,22
+85,3,true,false,"",3720.0,22
+86,4,true,false,"",1559.0,22
+87,2,false,true,1 ball will become 2 balls then merge again,2023.0,22
+88,3,false,true,There was a fifth white ball.,4231.0,46
+89,4,false,true,Two of the light objects seemed to merge,4311.0,22
+90,6,true,true,"There were not 4 white balls, but 5, at one point.",2993.0,22
+91,5,true,false,"",2951.0,22
+92,2,true,false,"",2870.0,22
+93,3,false,true,Another light object ,2612.0,22
+94,5,false,true,one ball became two,2813.0,22
+95,6,true,false,"",10886.0,22
+96,4,false,true,One of the light dots split into two,2902.0,22
+97,6,false,false,"",3735.0,22
+98,1,false,true,It was 3 bounces every time,5973.0,22
+99,2,false,false,"",5335.0,22
+100,3,true,false,"",2760.0,22
+101,4,true,false,"",3117.0,22
+102,5,true,true,I think there was an extra light object,4098.0,22
+103,2,true,true,"One of the balls split into two so there were 5 white balls, and then it went back to 4",2148.0,22
+104,5,false,false,"",5731.0,22
+105,6,true,true,an extra white ball,3647.0,30
+106,6,false,true,Two balls seemed to appear out of one right after it bounced off the wall.,3435.0,22
+107,1,false,true,the ball doubled to 2,8007.0,30
+108,2,false,false,"",2109.0,22
+109,3,true,false,"",2498.0,22
+110,4,true,false,"",3855.0,30
+111,1,true,false,"",2518.0,30
+112,2,true,false,"",2848.0,22
+113,3,false,false,"",2153.0,22
+114,5,true,false,"",6510.0,22
+115,4,true,false,"",3942.0,22
+116,4,false,true,One of the balls became two balls and then went back to being one ball. Either that or two balls were totally in sync in their movement and it only looked like one ball until they came out of sync for a second and then went got back in sync.,3638.0,22
+117,5,false,true,two balls showed up when it was one ball,2111.0,22
+118,6,false,false,"",4163.0,22
+119,1,false,false,"",3658.0,22
+120,2,false,false,"",2912.0,30
+121,3,true,true,The ball dragged across the left panel before it bounced.,6627.0,22
+122,6,true,false,"",3207.0,22
+123,1,true,false,"",3098.0,22
+124,5,true,false,"",5906.0,30
